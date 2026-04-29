@@ -25,18 +25,17 @@
 
 ## インストール
 
-`keiba-data-interface` は PyPI に公開されていないため、事前にインストールが必要です。
+```bash
+pip install -e "/path/to/race-data"
+```
 
-### 1. keiba-data-interface のインストール
+`keiba-data-interface` は `pyproject.toml` で Git URL 依存関係として宣言されているため、上記コマンド一つで自動的にインストールされます。
+
+ネットワーク制限などで GitHub にアクセスできない場合は、事前に手動でインストールしてください。
 
 ```bash
 git clone https://github.com/KeibaAI-developer/keiba-data-interface
 pip install -e ./keiba-data-interface
-```
-
-### 2. race-data のインストール
-
-```bash
 pip install -e "/path/to/race-data"
 ```
 
