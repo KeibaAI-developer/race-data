@@ -67,8 +67,10 @@ class RaceData:
         """win_show_odds_df を最新のオッズで更新する.
 
         未来レースの直前にリアルタイムオッズへ更新する用途を想定する。
+        win_show_odds_df を参照して算出される可能性がある num_runners も同期更新する。
         """
         self.win_show_odds_df = self.data_interface.get_win_show_odds(self.race_code)
+        self.num_runners = self._calculate_num_runners()
 
     def is_make_debut(self) -> bool:
         """新馬戦かどうかを判定する.
