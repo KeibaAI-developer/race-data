@@ -4,7 +4,7 @@ import pytest
 
 from race_data.race_data import RaceData
 
-from .conftest import _PAST_RACE_CODE, _make_mock_di, _make_race_basic_info_df
+from .conftest import PAST_RACE_CODE, make_mock_di, make_race_basic_info_df
 
 # 正常系
 
@@ -19,8 +19,8 @@ from .conftest import _PAST_RACE_CODE, _make_mock_di, _make_race_basic_info_df
 )
 def test_is_make_debut(kyoso_joken_code: str, expected: bool) -> None:
     """競走条件コードで新馬戦かどうかを判定できる."""
-    mock_di = _make_mock_di(
-        race_basic_info_df=_make_race_basic_info_df(kyoso_joken_code=kyoso_joken_code)
+    mock_di = make_mock_di(
+        race_basic_info_df=make_race_basic_info_df(kyoso_joken_code=kyoso_joken_code)
     )
-    race_data = RaceData(race_code=_PAST_RACE_CODE, data_interface=mock_di)
+    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
     assert race_data.is_make_debut() is expected

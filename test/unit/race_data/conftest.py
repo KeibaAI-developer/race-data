@@ -8,11 +8,11 @@ from keiba_data_interface import DataInterface
 
 from race_data.race_data import RaceData
 
-_PAST_RACE_CODE = "2023112605050812"
-_FUTURE_RACE_CODE = "2099010105050801"
+PAST_RACE_CODE = "2023112605050812"
+FUTURE_RACE_CODE = "2099010105050801"
 
 
-def _make_race_basic_info_df(
+def make_race_basic_info_df(
     shiba_da: str = "芝",
     race_shubetsu: str = "平地",
     hidari_migi: str = "左",
@@ -35,7 +35,7 @@ def _make_race_basic_info_df(
     )
 
 
-def _make_entry_df(
+def make_entry_df(
     uma_bans: list[int] | None = None,
     horse_ids: list[str] | None = None,
 ) -> pd.DataFrame:
@@ -47,7 +47,7 @@ def _make_entry_df(
     return pd.DataFrame({"馬番": uma_bans, "血統登録番号": horse_ids})
 
 
-def _make_win_show_odds_df(
+def make_win_show_odds_df(
     uma_bans: list[int] | None = None,
     ninkis: list[int | None] | None = None,
 ) -> pd.DataFrame:
@@ -59,7 +59,7 @@ def _make_win_show_odds_df(
     return pd.DataFrame({"馬番": uma_bans, "単勝人気": ninkis})
 
 
-def _make_past_performances_df(
+def make_past_performances_df(
     race_codes: list[str] | None = None,
     keibajo_codes: list[str] | None = None,
     ijo_codes: list[str] | None = None,
@@ -80,7 +80,7 @@ def _make_past_performances_df(
     )
 
 
-def _make_mock_di(
+def make_mock_di(
     *,
     race_basic_info_df: pd.DataFrame | None = None,
     entry_df: pd.DataFrame | None = None,
@@ -93,16 +93,16 @@ def _make_mock_di(
     """モック DataInterface を作成する."""
     mock = MagicMock(spec=DataInterface)
     mock.get_race_basic_info.return_value = (
-        race_basic_info_df if race_basic_info_df is not None else _make_race_basic_info_df()
+        race_basic_info_df if race_basic_info_df is not None else make_race_basic_info_df()
     )
     mock.get_entry.return_value = (
-        entry_df if entry_df is not None else _make_entry_df()
+        entry_df if entry_df is not None else make_entry_df()
     )
     mock.get_win_show_odds.return_value = (
-        win_show_odds_df if win_show_odds_df is not None else _make_win_show_odds_df()
+        win_show_odds_df if win_show_odds_df is not None else make_win_show_odds_df()
     )
     mock.get_result.return_value = (
-        result_df if result_df is not None else _make_entry_df()
+        result_df if result_df is not None else make_entry_df()
     )
     mock.get_race_result_info.return_value = (
         race_result_info_df if race_result_info_df is not None else pd.DataFrame()
@@ -111,7 +111,7 @@ def _make_mock_di(
         payoff_df if payoff_df is not None else pd.DataFrame()
     )
     mock.get_past_performances.return_value = (
-        past_performances_df if past_performances_df is not None else _make_past_performances_df()
+        past_performances_df if past_performances_df is not None else make_past_performances_df()
     )
     return mock
 
@@ -119,22 +119,22 @@ def _make_mock_di(
 @pytest.fixture()
 def mock_di_past() -> MagicMock:
     """過去レース用モック DataInterface."""
-    return _make_mock_di()
+    return make_mock_di()
 
 
 @pytest.fixture()
 def mock_di_future() -> MagicMock:
     """未来レース用モック DataInterface."""
-    return _make_mock_di()
+    return make_mock_di()
 
 
 @pytest.fixture()
 def past_race_data(mock_di_past: MagicMock) -> RaceData:
     """過去レースの RaceData インスタンス."""
-    return RaceData(race_code=_PAST_RACE_CODE, data_interface=mock_di_past)
+    return RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di_past)
 
 
 @pytest.fixture()
 def future_race_data(mock_di_future: MagicMock) -> RaceData:
     """未来レースの RaceData インスタンス."""
-    return RaceData(race_code=_FUTURE_RACE_CODE, data_interface=mock_di_future)
+    return RaceData(race_code=FUTURE_RACE_CODE, data_interface=mock_di_future)

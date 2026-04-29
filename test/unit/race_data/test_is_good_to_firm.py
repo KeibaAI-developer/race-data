@@ -4,7 +4,7 @@ import pytest
 
 from race_data.race_data import RaceData
 
-from .conftest import _PAST_RACE_CODE, _make_mock_di
+from .conftest import PAST_RACE_CODE, make_mock_di
 
 # 正常系
 
@@ -20,6 +20,6 @@ from .conftest import _PAST_RACE_CODE, _make_mock_di
 )
 def test_is_good_to_firm(baba_code: str, expected: bool) -> None:
     """baba_code が '1' のとき良馬場と判定される."""
-    mock_di = _make_mock_di()
-    race_data = RaceData(race_code=_PAST_RACE_CODE, data_interface=mock_di, baba_code=baba_code)
+    mock_di = make_mock_di()
+    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di, baba_code=baba_code)
     assert race_data.is_good_to_firm() is expected
