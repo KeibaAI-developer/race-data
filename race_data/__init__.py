@@ -7,4 +7,6 @@ try:
 except (PackageNotFoundError, ImportError):
     __version__ = "unknown"
 
-# 公開するクラス・関数のインポートをここに記述
+from race_data.race_data import RaceData
+
+__all__ = ["RaceData"]

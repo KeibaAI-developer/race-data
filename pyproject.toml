@@ -24,7 +24,8 @@ classifiers = [
 ]
 
 dependencies = [
-    # ライブラリの依存パッケージを記述
+    "pandas>=2.0.0",
+    "keiba-data-interface @ git+https://github.com/KeibaAI-developer/keiba-data-interface.git",
 ]
 
 [project.optional-dependencies]
