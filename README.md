@@ -136,18 +136,33 @@ race_data_list = [
 
 ## メソッド一覧
 
-| メソッド | 引数 | 戻り値 | 説明 | サンプルコード |
-|---|---|---|---|---|
-| `update_win_show_odds()` | なし | `None` | `win_show_odds_df` を最新オッズで上書き | [example_race_data.py](example/example_race_data.py) |
-| `is_make_debut()` | なし | `bool` | 新馬戦かどうか | |
-| `is_steeple_chase()` | なし | `bool` | 障害レースかどうか | |
-| `is_straight_race()` | なし | `bool` | 直線コースかどうか | |
-| `is_turf()` | なし | `bool` | 芝レースかどうか | |
-| `is_dirt()` | なし | `bool` | ダートレースかどうか | |
-| `is_good_to_firm()` | なし | `bool` | 良馬場かどうか（`baba_code == "1"`） | |
-| `get_filtered_past_performances(uma_ban)` | 馬番（int） | `pd.DataFrame` | 機械学習に有効な過去成績を抽出 | |
+| メソッド | 引数 | 戻り値 | 説明 |
+|---|---|---|---|
+| `update_win_show_odds()` | なし | `None` | `win_show_odds_df` を最新オッズで上書き |
+| `is_make_debut()` | なし | `bool` | 新馬戦かどうか |
+| `is_steeple_chase()` | なし | `bool` | 障害レースかどうか |
+| `is_straight_race()` | なし | `bool` | 直線コースかどうか |
+| `is_turf()` | なし | `bool` | 芝レースかどうか |
+| `is_dirt()` | なし | `bool` | ダートレースかどうか |
+| `is_good_to_firm()` | なし | `bool` | 良馬場かどうか（`baba_code == "1"`） |
+| `get_filtered_past_performances(uma_ban)` | 馬番（int） | `pd.DataFrame` | 機械学習に有効な過去成績を抽出 |
 
 ### `get_filtered_past_performances` のフィルタリング条件
 
 - 中央競馬のみ（競馬場コードが `"01"` 〜 `"10"`）
 - 競走除外を除く（出走取消・発走除外・競走除外は除外）
+
+
+## サンプルコード
+
+[example/example_race_data.py](example/example_race_data.py) に実行可能なサンプルスクリプトがあります。
+
+```bash
+# mykeibadb プロバイダーで実行（デフォルト）
+python example/example_race_data.py --race-code 2023112605050812
+
+# scraping プロバイダーで実行
+python example/example_race_data.py --race-code 2023112605050812 --provider scraping
+```
+
+サンプルスクリプトはレース基本情報・出馬表・レース結果・過去成績（フィルタリング済み）を順に表示します。
