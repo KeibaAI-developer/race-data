@@ -180,6 +180,6 @@ class RaceData:
         Returns:
             bool: 同日を含む未来のレースなら True
         """
-        race_date_str = self.race_code[0:4] + self.race_code[4:8]
+        race_date_str = self.race_code[:8]
         today_str = datetime.date.today().strftime("%Y%m%d")
         return race_date_str >= today_str
