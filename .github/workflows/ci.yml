@@ -22,10 +22,10 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/.cache/pip
-        key: "race-data-${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}"
+        key: race-data-${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
         restore-keys: |
-          "race-data-${{ runner.os }}-pip-"
-          "${{ runner.os }}-pip-"
+          race-data-${{ runner.os }}-pip-
+          ${{ runner.os }}-pip-
 
     - name: Install dependencies
       run: |
@@ -75,10 +75,10 @@ jobs:
       uses: actions/cache@v3
       with:
         path: ~/.cache/pip
-        key: "race-data-test-${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}"
+        key: race-data-test-${{ runner.os }}-pip-${{ hashFiles('pyproject.toml') }}
         restore-keys: |
-          "race-data-test-${{ runner.os }}-pip-"
-          "${{ runner.os }}-pip-"
+          race-data-test-${{ runner.os }}-pip-
+          ${{ runner.os }}-pip-
 
     - name: Install dependencies
       run: |
