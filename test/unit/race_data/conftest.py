@@ -80,6 +80,14 @@ def make_past_performances_df(
     )
 
 
+def make_horse_master_df(
+    horse_id: str = "2019105219",
+    horse_name: str = "テストウマ",
+) -> pd.DataFrame:
+    """競走馬マスタ DataFrame を作成する."""
+    return pd.DataFrame({"血統登録番号": [horse_id], "馬名": [horse_name]})
+
+
 def make_mock_di(
     *,
     race_basic_info_df: pd.DataFrame | None = None,
@@ -89,6 +97,7 @@ def make_mock_di(
     race_result_info_df: pd.DataFrame | None = None,
     payoff_df: pd.DataFrame | None = None,
     past_performances_df: pd.DataFrame | None = None,
+    horse_master_df: pd.DataFrame | None = None,
 ) -> MagicMock:
     """モック DataInterface を作成する."""
     mock = MagicMock(spec=DataInterface)
@@ -112,6 +121,9 @@ def make_mock_di(
     )
     mock.get_past_performances.return_value = (
         past_performances_df if past_performances_df is not None else make_past_performances_df()
+    )
+    mock.get_horse_master.return_value = (
+        horse_master_df if horse_master_df is not None else make_horse_master_df()
     )
     return mock
 

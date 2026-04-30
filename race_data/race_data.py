@@ -30,6 +30,7 @@ class RaceData:
         payoff_df (pd.DataFrame): 払戻情報（過去レースのみ）
         win_show_odds_df (pd.DataFrame): 単複オッズ情報
         past_performances_dict (dict[int, pd.DataFrame]): 各馬の過去成績辞書（キーは馬番）
+        horse_master_dict (dict[str, pd.DataFrame]): 各馬のマスタ情報辞書（キーは血統登録番号）
         num_runners (int): 出走頭数（競走除外などは除く）
     """
 
@@ -44,6 +45,7 @@ class RaceData:
     payoff_df: pd.DataFrame = field(init=False, default_factory=pd.DataFrame)
     win_show_odds_df: pd.DataFrame = field(init=False, default_factory=pd.DataFrame)
     past_performances_dict: dict[int, pd.DataFrame] = field(init=False, default_factory=dict)
+    horse_master_dict: dict[str, pd.DataFrame] = field(init=False, default_factory=dict)
     num_runners: int = field(init=False, default=0)
 
     def __post_init__(self) -> None:
@@ -54,6 +56,7 @@ class RaceData:
         self.win_show_odds_df = self.data_interface.get_win_show_odds(self.race_code)
         self.num_runners = self._calculate_num_runners()
         self.past_performances_dict = self._build_past_performances_dict()
+        self.horse_master_dict = self._build_horse_master_dict()
         # 過去レースの場合結果などを取得
         if not self.future_race:
             self.result_df = self.data_interface.get_result(self.race_code)
@@ -165,6 +168,14 @@ class RaceData:
             pp_df = pp_df[pp_df["レースコード"] < self.race_code].reset_index(drop=True)
             past_performances[uma_ban] = pp_df
         return past_performances
+
+    def _build_horse_master_dict(self) -> dict[str, pd.DataFrame]:
+        """entry_df の各馬のマスタ情報辞書を構築する."""
+        horse_master: dict[str, pd.DataFrame] = {}
+        for horse_id in self.entry_df["血統登録番号"].unique():
+            horse_id_str = str(horse_id)
+            horse_master[horse_id_str] = self.data_interface.get_horse_master(horse_id_str)
+        return horse_master
 
     def _get_baba_code(self) -> str:
         """race_basic_info_df から馬場状態コードを取得する."""
