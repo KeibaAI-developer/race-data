@@ -1,6 +1,6 @@
 """RaceData.__post_init__ のテスト."""
 
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pandas as pd
 
@@ -171,7 +171,12 @@ def test_horse_master_fetched_per_horse(
     past_race_data: RaceData, mock_di_past: MagicMock
 ) -> None:
     """馬ごとに get_horse_master が呼ばれる."""
-    assert mock_di_past.get_horse_master.call_count == 3
+    expected_horse_ids = list(make_entry_df()["血統登録番号"])
+    assert mock_di_past.get_horse_master.call_count == len(expected_horse_ids)
+    mock_di_past.get_horse_master.assert_has_calls(
+        [call(horse_id) for horse_id in expected_horse_ids],
+        any_order=True,
+    )
 
 
 def test_horse_master_dict_values_are_dataframes(past_race_data: RaceData) -> None:
