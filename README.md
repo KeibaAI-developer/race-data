@@ -93,6 +93,15 @@ for uma_ban, pp_df in rd.past_performances_dict.items():
     print(f"馬番 {uma_ban}: {len(filtered)} レース")
 ```
 
+### 各馬のマスタ情報にアクセスする
+
+`horse_master_dict` は血統登録番号をキーとした辞書です。
+
+```python
+for horse_id, master_df in rd.horse_master_dict.items():
+    print(f"血統登録番号 {horse_id}: {master_df['馬名'].iloc[0]}")
+```
+
 ### 未来レースのオッズを更新する
 
 レース直前に最新オッズへ更新する場合は `update_win_show_odds` を呼び出します。
@@ -130,6 +139,7 @@ race_data_list = [
 | `payoff_df` | `pd.DataFrame` | 払戻情報（過去レースのみ。未来レースでは空） |
 | `win_show_odds_df` | `pd.DataFrame` | 単複オッズ情報 |
 | `past_performances_dict` | `dict[int, pd.DataFrame]` | 各馬の過去成績辞書（キー: 馬番。対象レース以前のデータのみ） |
+| `horse_master_dict` | `dict[str, pd.DataFrame]` | 各馬のマスタ情報辞書（キー: 血統登録番号） |
 | `num_runners` | `int` | 出走頭数（競走除外などは除く） |
 
 

@@ -2,11 +2,14 @@
 
 from unittest.mock import MagicMock
 
+import pandas as pd
+
 from race_data.race_data import RaceData
 
 from .conftest import (
     FUTURE_RACE_CODE,
     PAST_RACE_CODE,
+    make_entry_df,
     make_mock_di,
     make_past_performances_df,
     make_race_basic_info_df,
@@ -156,3 +159,22 @@ def test_baba_code_overridden_by_constructor() -> None:
     mock_di = make_mock_di()
     race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di, baba_code="3")
     assert race_data.baba_code == "3"
+
+
+def test_horse_master_dict_has_all_horses(past_race_data: RaceData) -> None:
+    """horse_master_dict に全馬の血統登録番号がキーとして含まれる."""
+    expected_ids = set(make_entry_df()["血統登録番号"])
+    assert set(past_race_data.horse_master_dict.keys()) == expected_ids
+
+
+def test_horse_master_fetched_per_horse(
+    past_race_data: RaceData, mock_di_past: MagicMock
+) -> None:
+    """馬ごとに get_horse_master が呼ばれる."""
+    assert mock_di_past.get_horse_master.call_count == 3
+
+
+def test_horse_master_dict_values_are_dataframes(past_race_data: RaceData) -> None:
+    """horse_master_dict の各値が DataFrame である."""
+    for df in past_race_data.horse_master_dict.values():
+        assert isinstance(df, pd.DataFrame)
