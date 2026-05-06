@@ -30,6 +30,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install git+https://github.com/KeibaAI-developer/keiba-data-interface.git
         pip install -e .[dev]
 
     - name: Run isort check
@@ -83,6 +84,7 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        pip install git+https://github.com/KeibaAI-developer/keiba-data-interface.git
         pip install -e .[dev]
 
     - name: Run unit test

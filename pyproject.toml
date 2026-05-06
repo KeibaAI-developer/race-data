@@ -25,7 +25,7 @@ classifiers = [
 
 dependencies = [
     "pandas>=2.0.0",
-    "keiba-data-interface @ git+https://github.com/KeibaAI-developer/keiba-data-interface.git",
+    "keiba-data-interface>=1.0.0",
 ]
 
 [project.optional-dependencies]
