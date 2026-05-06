@@ -53,6 +53,8 @@ def main() -> None:
     print(f"芝           : {rd.is_turf()}")
     print(f"ダート        : {rd.is_dirt()}")
     print(f"良馬場       : {rd.is_good_to_firm()}")
+    print(f"出走する馬番   : {rd.valid_horse_num}")
+    print(f"出走頭数: {len(rd.valid_horse_num)}")
 
     print("\n【レース基本情報】")
     for col in rd.race_basic_info_df.columns:
@@ -61,7 +63,8 @@ def main() -> None:
             print(f"  {col}: {val}")
 
     entry_display_cols = [
-        col for col in ["馬番", "馬名", "騎手名略称", "単勝オッズ", "単勝人気順"]
+        col
+        for col in ["馬番", "馬名", "騎手名略称", "単勝オッズ", "単勝人気順"]
         if col in rd.entry_df.columns
     ]
     print("\n【出馬表（先頭3行）】")
@@ -69,7 +72,8 @@ def main() -> None:
 
     if not rd.result_df.empty:
         result_display_cols = [
-            col for col in ["確定着順", "馬番", "馬名", "走破タイム", "後3ハロン"]
+            col
+            for col in ["確定着順", "馬番", "馬名", "走破タイム", "後3ハロン"]
             if col in rd.result_df.columns
         ]
         print("\n【レース結果（先頭3行）】")
@@ -79,7 +83,8 @@ def main() -> None:
         first_uma_ban = min(rd.past_performances_dict.keys())
         filtered = rd.get_filtered_past_performances(first_uma_ban)
         pp_display_cols = [
-            col for col in ["レースコード", "競馬場コード", "確定着順", "単勝人気順"]
+            col
+            for col in ["レースコード", "競馬場コード", "確定着順", "単勝人気順"]
             if col in filtered.columns
         ]
         print(f"\n【馬番 {first_uma_ban} の過去成績（フィルタリング済み、先頭3行）】")

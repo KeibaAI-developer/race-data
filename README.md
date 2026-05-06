@@ -141,6 +141,7 @@ race_data_list = [
 | `past_performances_dict` | `dict[int, pd.DataFrame]` | 各馬の過去成績辞書（キー: 馬番。対象レース以前のデータのみ） |
 | `horse_master_dict` | `dict[str, pd.DataFrame]` | 各馬のマスタ情報辞書（キー: 血統登録番号） |
 | `num_runners` | `int` | 出走頭数（競走除外などは除く） |
+| `valid_horse_num` | `list[int]` | 出走予定の馬番リスト（異常区分コードが1,2,3の馬を除外）。昇順 |
 
 
 ## メソッド一覧
