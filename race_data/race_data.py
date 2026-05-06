@@ -32,6 +32,7 @@ class RaceData:
         past_performances_dict (dict[int, pd.DataFrame]): 各馬の過去成績辞書（キーは馬番）
         horse_master_dict (dict[str, pd.DataFrame]): 各馬のマスタ情報辞書（キーは血統登録番号）
         num_runners (int): 出走頭数（競走除外などは除く）
+        valid_horse_num (list[int]): 出走予定の馬番リスト（異常区分コードが1,2,3の馬を除く）。昇順
     """
 
     race_code: str
@@ -47,6 +48,7 @@ class RaceData:
     past_performances_dict: dict[int, pd.DataFrame] = field(init=False, default_factory=dict)
     horse_master_dict: dict[str, pd.DataFrame] = field(init=False, default_factory=dict)
     num_runners: int = field(init=False, default=0)
+    valid_horse_num: list[int] = field(init=False, default_factory=list)
 
     def __post_init__(self) -> None:
         """データを初期化する."""
@@ -55,6 +57,7 @@ class RaceData:
         self.entry_df = self.data_interface.get_entry(self.race_code)
         self.win_show_odds_df = self.data_interface.get_win_show_odds(self.race_code)
         self.num_runners = self._calculate_num_runners()
+        self.valid_horse_num = self._build_valid_horse_num()
         self.past_performances_dict = self._build_past_performances_dict()
         self.horse_master_dict = self._build_horse_master_dict()
         # 過去レースの場合結果などを取得
@@ -156,6 +159,14 @@ class RaceData:
         if pd.notna(shutsu_val):
             return int(shutsu_val)
         return int(self.win_show_odds_df["単勝人気"].notna().sum())
+
+    def _build_valid_horse_num(self) -> list[int]:
+        """出走予定の馬番リストを構築する.
+
+        entry_df の異常区分コードが "1", "2", "3" の馬を除いた馬番を昇順で返す。
+        """
+        valid = self.entry_df[~self.entry_df["異常区分コード"].isin(_EXCLUDE_IJO_CODES)]
+        return sorted(valid["馬番"].tolist())
 
     def _build_past_performances_dict(self) -> dict[int, pd.DataFrame]:
         """entry_df の各馬の過去成績辞書を構築する."""

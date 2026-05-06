@@ -38,13 +38,16 @@ def make_race_basic_info_df(
 def make_entry_df(
     uma_bans: list[int] | None = None,
     horse_ids: list[str] | None = None,
+    ijo_codes: list[str] | None = None,
 ) -> pd.DataFrame:
     """出馬表 DataFrame を作成する."""
     if uma_bans is None:
         uma_bans = [1, 2, 3]
     if horse_ids is None:
         horse_ids = ["2019105219", "2020103656", "2021190001"]
-    return pd.DataFrame({"馬番": uma_bans, "血統登録番号": horse_ids})
+    if ijo_codes is None:
+        ijo_codes = ["0", "0", "0"]
+    return pd.DataFrame({"馬番": uma_bans, "血統登録番号": horse_ids, "異常区分コード": ijo_codes})
 
 
 def make_win_show_odds_df(

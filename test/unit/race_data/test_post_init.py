@@ -55,9 +55,7 @@ def test_win_show_odds_df_fetched(past_race_data: RaceData, mock_di_past: MagicM
     assert not past_race_data.win_show_odds_df.empty
 
 
-def test_result_df_fetched_for_past_race(
-    past_race_data: RaceData, mock_di_past: MagicMock
-) -> None:
+def test_result_df_fetched_for_past_race(past_race_data: RaceData, mock_di_past: MagicMock) -> None:
     """過去レースで result_df が取得される."""
     mock_di_past.get_result.assert_called_once_with(PAST_RACE_CODE)
     assert not past_race_data.result_df.empty
@@ -167,9 +165,7 @@ def test_horse_master_dict_has_all_horses(past_race_data: RaceData) -> None:
     assert set(past_race_data.horse_master_dict.keys()) == expected_ids
 
 
-def test_horse_master_fetched_per_horse(
-    past_race_data: RaceData, mock_di_past: MagicMock
-) -> None:
+def test_horse_master_fetched_per_horse(past_race_data: RaceData, mock_di_past: MagicMock) -> None:
     """馬ごとに get_horse_master が呼ばれる."""
     expected_horse_ids = list(make_entry_df()["血統登録番号"])
     assert mock_di_past.get_horse_master.call_count == len(expected_horse_ids)
@@ -183,3 +179,48 @@ def test_horse_master_dict_values_are_dataframes(past_race_data: RaceData) -> No
     """horse_master_dict の各値が DataFrame である."""
     for df in past_race_data.horse_master_dict.values():
         assert isinstance(df, pd.DataFrame)
+
+
+def test_valid_horse_num_all_valid(past_race_data: RaceData) -> None:
+    """全馬が有効な場合、全馬番が昇順に含まれる."""
+    assert past_race_data.valid_horse_num == [1, 2, 3]
+
+
+def test_valid_horse_num_excludes_ijo_code_1() -> None:
+    """異常区分コード1の馬が valid_horse_num から除外される."""
+    entry_df = make_entry_df(uma_bans=[1, 2, 3], ijo_codes=["1", "0", "0"])
+    mock_di = make_mock_di(entry_df=entry_df)
+    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
+    assert race_data.valid_horse_num == [2, 3]
+
+
+def test_valid_horse_num_excludes_ijo_code_2() -> None:
+    """異常区分コード2の馬が valid_horse_num から除外される."""
+    entry_df = make_entry_df(uma_bans=[1, 2, 3], ijo_codes=["0", "2", "0"])
+    mock_di = make_mock_di(entry_df=entry_df)
+    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
+    assert race_data.valid_horse_num == [1, 3]
+
+
+def test_valid_horse_num_excludes_ijo_code_3() -> None:
+    """異常区分コード3の馬が valid_horse_num から除外される."""
+    entry_df = make_entry_df(uma_bans=[1, 2, 3], ijo_codes=["0", "0", "3"])
+    mock_di = make_mock_di(entry_df=entry_df)
+    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
+    assert race_data.valid_horse_num == [1, 2]
+
+
+def test_valid_horse_num_is_sorted() -> None:
+    """entry_df の馬番順に関わらず valid_horse_num が昇順に並んでいる."""
+    entry_df = make_entry_df(uma_bans=[3, 1, 2], ijo_codes=["0", "0", "0"])
+    mock_di = make_mock_di(entry_df=entry_df)
+    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
+    assert race_data.valid_horse_num == [1, 2, 3]
+
+
+def test_valid_horse_num_empty_when_all_excluded() -> None:
+    """全馬が異常区分コード1,2,3の場合は空リストになる."""
+    entry_df = make_entry_df(uma_bans=[1, 2, 3], ijo_codes=["1", "2", "3"])
+    mock_di = make_mock_di(entry_df=entry_df)
+    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
+    assert race_data.valid_horse_num == []
