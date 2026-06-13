@@ -69,7 +69,7 @@ class RaceData:
     def fetch_odds(self) -> None:
         """単複オッズを取得する."""
         self._win_show_odds_df = self.data_interface.get_win_show_odds(self.race_code)
-        if self.num_runners == 0:
+        if pd.isna(self.race_basic_info_df["出走頭数"].iloc[0]):
             self.num_runners = int(self._win_show_odds_df["単勝人気"].notna().sum())
 
     def fetch_past_performances(self) -> None:
