@@ -84,6 +84,10 @@ class RaceData:
         """遅延取得対象をすべて取得する."""
         if not self.future_race:
             self.fetch_result()
+        else:
+            self._result_df = pd.DataFrame()
+            self._race_result_info_df = pd.DataFrame()
+            self._payoff_df = pd.DataFrame()
         self.fetch_odds()
         self.fetch_past_performances()
         self.fetch_horse_master()
