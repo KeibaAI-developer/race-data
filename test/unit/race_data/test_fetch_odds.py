@@ -49,6 +49,23 @@ def test_fetch_odds_complements_num_runners_when_missing() -> None:
     assert race_data.num_runners == 2
 
 
+def test_fetch_odds_updates_num_runners_when_race_basic_info_missing() -> None:
+    """出走頭数が未確定の場合は fetch_odds のたびに num_runners が更新される."""
+    first_odds_df = make_win_show_odds_df(ninkis=[1, 2, None])
+    second_odds_df = make_win_show_odds_df(ninkis=[1, None, None])
+    mock_di = make_mock_di(
+        race_basic_info_df=make_race_basic_info_df(shutsu_count=None),
+        win_show_odds_df=first_odds_df,
+    )
+    mock_di.get_win_show_odds.side_effect = [first_odds_df, second_odds_df]
+    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
+
+    race_data.fetch_odds()
+    assert race_data.num_runners == 2
+    race_data.fetch_odds()
+    assert race_data.num_runners == 1
+
+
 # 準正常系
 
 
