@@ -25,12 +25,12 @@ class RaceData:
         future_race (bool): 未来のレースかどうか
         race_basic_info_df (pd.DataFrame): レース基本情報（1行）
         entry_df (pd.DataFrame): 出馬表（常に取得）
-        result_df (pd.DataFrame): レース結果（過去レースのみ）
-        race_result_info_df (pd.DataFrame): ラップタイム・コーナー通過順（過去レースのみ）
-        payoff_df (pd.DataFrame): 払戻情報（過去レースのみ）
-        win_show_odds_df (pd.DataFrame): 単複オッズ情報
-        past_performances_dict (dict[int, pd.DataFrame]): 各馬の過去成績辞書（キーは馬番）
-        horse_master_dict (dict[str, pd.DataFrame]): 各馬のマスタ情報辞書（キーは血統登録番号）
+        result_df (pd.DataFrame): レース結果。fetch_result 後に参照可能
+        race_result_info_df (pd.DataFrame): ラップタイム・コーナー通過順。fetch_result 後に参照可能
+        payoff_df (pd.DataFrame): 払戻情報。fetch_result 後に参照可能
+        win_show_odds_df (pd.DataFrame): 単複オッズ情報。fetch_odds 後に参照可能
+        past_performances_dict (dict[int, pd.DataFrame]): 各馬の過去成績辞書。fetch_past_performances 後に参照可能
+        horse_master_dict (dict[str, pd.DataFrame]): 各馬のマスタ情報辞書。fetch_horse_master 後に参照可能
         num_runners (int): 出走頭数（競走除外などは除く）
         valid_horse_num (list[int]): 出走予定の馬番リスト（異常区分コードが1,2,3の馬を除く）。昇順
     """
@@ -41,42 +41,120 @@ class RaceData:
     future_race: bool = field(init=False, default=False)
     race_basic_info_df: pd.DataFrame = field(init=False, default_factory=pd.DataFrame)
     entry_df: pd.DataFrame = field(init=False, default_factory=pd.DataFrame)
-    result_df: pd.DataFrame = field(init=False, default_factory=pd.DataFrame)
-    race_result_info_df: pd.DataFrame = field(init=False, default_factory=pd.DataFrame)
-    payoff_df: pd.DataFrame = field(init=False, default_factory=pd.DataFrame)
-    win_show_odds_df: pd.DataFrame = field(init=False, default_factory=pd.DataFrame)
-    past_performances_dict: dict[int, pd.DataFrame] = field(init=False, default_factory=dict)
-    horse_master_dict: dict[str, pd.DataFrame] = field(init=False, default_factory=dict)
     num_runners: int = field(init=False, default=0)
     valid_horse_num: list[int] = field(init=False, default_factory=list)
+    _result_df: pd.DataFrame | None = field(init=False, default=None)
+    _race_result_info_df: pd.DataFrame | None = field(init=False, default=None)
+    _payoff_df: pd.DataFrame | None = field(init=False, default=None)
+    _win_show_odds_df: pd.DataFrame | None = field(init=False, default=None)
+    _past_performances_dict: dict[int, pd.DataFrame] | None = field(init=False, default=None)
+    _horse_master_dict: dict[str, pd.DataFrame] | None = field(init=False, default=None)
 
     def __post_init__(self) -> None:
         """データを初期化する."""
         self.future_race = self._is_future_race()
         self.race_basic_info_df = self.data_interface.get_race_basic_info(self.race_code)
         self.entry_df = self.data_interface.get_entry(self.race_code)
-        self.win_show_odds_df = self.data_interface.get_win_show_odds(self.race_code)
         self.num_runners = self._calculate_num_runners()
         self.valid_horse_num = self._build_valid_horse_num()
-        self.past_performances_dict = self._build_past_performances_dict()
-        self.horse_master_dict = self._build_horse_master_dict()
-        # 過去レースの場合結果などを取得
-        if not self.future_race:
-            self.result_df = self.data_interface.get_result(self.race_code)
-            self.race_result_info_df = self.data_interface.get_race_result_info(self.race_code)
-            self.payoff_df = self.data_interface.get_payoff(self.race_code)
-        # 馬場状態コードが未指定の場合は race_basic_info_df から取得
         if not self.baba_code:
             self.baba_code = self._get_baba_code()
 
-    def update_win_show_odds(self) -> None:
-        """win_show_odds_df を最新のオッズで更新する.
+    def fetch_result(self) -> None:
+        """結果系データを取得する."""
+        self._result_df = self.data_interface.get_result(self.race_code)
+        self._race_result_info_df = self.data_interface.get_race_result_info(self.race_code)
+        self._payoff_df = self.data_interface.get_payoff(self.race_code)
 
-        未来レースの直前にリアルタイムオッズへ更新する用途を想定する。
-        win_show_odds_df を参照して算出される可能性がある num_runners も同期更新する。
+    def fetch_odds(self) -> None:
+        """単複オッズを取得する."""
+        self._win_show_odds_df = self.data_interface.get_win_show_odds(self.race_code)
+        if self.num_runners == 0:
+            self.num_runners = int(self._win_show_odds_df["単勝人気"].notna().sum())
+
+    def fetch_past_performances(self) -> None:
+        """各馬の過去成績辞書を取得する."""
+        self._past_performances_dict = self._build_past_performances_dict()
+
+    def fetch_horse_master(self) -> None:
+        """各馬のマスタ情報辞書を取得する."""
+        self._horse_master_dict = self._build_horse_master_dict()
+
+    def fetch_all(self) -> None:
+        """遅延取得対象をすべて取得する."""
+        if not self.future_race:
+            self.fetch_result()
+        self.fetch_odds()
+        self.fetch_past_performances()
+        self.fetch_horse_master()
+
+    @property
+    def result_df(self) -> pd.DataFrame:
+        """レース結果を返す.
+
+        Raises:
+            RuntimeError: fetch_result が未実行の場合
         """
-        self.win_show_odds_df = self.data_interface.get_win_show_odds(self.race_code)
-        self.num_runners = self._calculate_num_runners()
+        if self._result_df is None:
+            raise RuntimeError("result_df is not fetched. Call fetch_result() first.")
+        return self._result_df
+
+    @property
+    def race_result_info_df(self) -> pd.DataFrame:
+        """ラップタイム・コーナー通過順を返す.
+
+        Raises:
+            RuntimeError: fetch_result が未実行の場合
+        """
+        if self._race_result_info_df is None:
+            raise RuntimeError("race_result_info_df is not fetched. Call fetch_result() first.")
+        return self._race_result_info_df
+
+    @property
+    def payoff_df(self) -> pd.DataFrame:
+        """払戻情報を返す.
+
+        Raises:
+            RuntimeError: fetch_result が未実行の場合
+        """
+        if self._payoff_df is None:
+            raise RuntimeError("payoff_df is not fetched. Call fetch_result() first.")
+        return self._payoff_df
+
+    @property
+    def win_show_odds_df(self) -> pd.DataFrame:
+        """単複オッズ情報を返す.
+
+        Raises:
+            RuntimeError: fetch_odds が未実行の場合
+        """
+        if self._win_show_odds_df is None:
+            raise RuntimeError("win_show_odds_df is not fetched. Call fetch_odds() first.")
+        return self._win_show_odds_df
+
+    @property
+    def past_performances_dict(self) -> dict[int, pd.DataFrame]:
+        """各馬の過去成績辞書を返す.
+
+        Raises:
+            RuntimeError: fetch_past_performances が未実行の場合
+        """
+        if self._past_performances_dict is None:
+            raise RuntimeError(
+                "past_performances_dict is not fetched. Call fetch_past_performances() first."
+            )
+        return self._past_performances_dict
+
+    @property
+    def horse_master_dict(self) -> dict[str, pd.DataFrame]:
+        """各馬のマスタ情報辞書を返す.
+
+        Raises:
+            RuntimeError: fetch_horse_master が未実行の場合
+        """
+        if self._horse_master_dict is None:
+            raise RuntimeError("horse_master_dict is not fetched. Call fetch_horse_master() first.")
+        return self._horse_master_dict
 
     def is_make_debut(self) -> bool:
         """新馬戦かどうかを判定する.
@@ -140,6 +218,7 @@ class RaceData:
             pd.DataFrame: フィルタリング済みの過去成績
 
         Raises:
+            RuntimeError: fetch_past_performances が未実行の場合
             KeyError: 指定馬番が past_performances_dict に存在しない場合
         """
         pp_df = self.past_performances_dict[uma_ban]
@@ -152,13 +231,12 @@ class RaceData:
     def _calculate_num_runners(self) -> int:
         """出走頭数を計算する.
 
-        race_basic_info_df の「出走頭数」から取得する。
-        NaN の場合は win_show_odds_df の「単勝人気」が NaN でない行数で計算する。
+        race_basic_info_df の「出走頭数」から取得する。NaN の場合は0を返す。
         """
         shutsu_val = self.race_basic_info_df["出走頭数"].iloc[0]
         if pd.notna(shutsu_val):
             return int(shutsu_val)
-        return int(self.win_show_odds_df["単勝人気"].notna().sum())
+        return 0
 
     def _build_valid_horse_num(self) -> list[int]:
         """出走予定の馬番リストを構築する.
