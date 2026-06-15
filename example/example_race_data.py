@@ -42,6 +42,7 @@ def main() -> None:
 
     di = DataInterface(provider=args.provider)
     rd = RaceData(race_code=args.race_code, data_interface=di)
+    rd.fetch_all()
 
     print(f"レースコード : {rd.race_code}")
     print(f"未来のレース : {rd.future_race}")
@@ -70,7 +71,7 @@ def main() -> None:
     print("\n【出馬表（先頭3行）】")
     _show_df_head(rd.entry_df, entry_display_cols)
 
-    if not rd.result_df.empty:
+    if not rd.future_race and not rd.result_df.empty:
         result_display_cols = [
             col
             for col in ["確定着順", "馬番", "馬名", "走破タイム", "後3ハロン"]
