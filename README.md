@@ -77,7 +77,10 @@ print(rd.is_good_to_firm())  # True（良馬場）
 ```python
 rd = RaceData(race_code=race_code, data_interface=di)
 
-rd.result_df  # RuntimeError: result_df is not fetched. Call fetch_result() first.
+try:
+    rd.result_df
+except RuntimeError as exc:
+    print(exc)  # result_df is not fetched. Call fetch_result() first.
 
 rd.fetch_result()             # result_df / race_result_info_df / payoff_df を取得
 rd.fetch_odds()                # win_show_odds_df を取得
