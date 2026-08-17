@@ -24,7 +24,9 @@ classifiers = [
 ]
 
 dependencies = [
-    "pandas>=2.0.0",
+    # pandas 3.0はpy.typedを同梱しておりpandas-stubsより優先されるため、
+    # mypyの判定結果がKeibaAI本体（pandas 2.3系）とずれる。3.0を除外する
+    "pandas>=2.0.0,<3.0.0",
     "keiba-data-interface>=1.0.0",
 ]
 
