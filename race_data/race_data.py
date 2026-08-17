@@ -29,8 +29,10 @@ class RaceData:
         race_result_info_df (pd.DataFrame): ラップタイム・コーナー通過順。fetch_result 後に参照可能
         payoff_df (pd.DataFrame): 払戻情報。fetch_result 後に参照可能
         win_show_odds_df (pd.DataFrame): 単複オッズ情報。fetch_odds 後に参照可能
-        past_performances_dict (dict[int, pd.DataFrame]): 各馬の過去成績辞書。fetch_past_performances 後に参照可能
-        horse_master_dict (dict[str, pd.DataFrame]): 各馬のマスタ情報辞書。fetch_horse_master 後に参照可能
+        past_performances_dict (dict[int, pd.DataFrame]): 各馬の過去成績辞書。
+            fetch_past_performances 後に参照可能
+        horse_master_dict (dict[str, pd.DataFrame]): 各馬のマスタ情報辞書。
+            fetch_horse_master 後に参照可能
         num_runners (int): 出走頭数（競走除外などは除く）
         valid_horse_num (list[int]): 出走予定の馬番リスト（異常区分コードが1,2,3の馬を除く）。昇順
     """
