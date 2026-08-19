@@ -5,8 +5,15 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 from keiba_data_interface import DataInterface
+from keiba_domain import (
+    CENTRAL_KEIBAJO_CODES,
+    Baba,
+    Direction,
+    RaceShubetsu,
+    TurfDirt,
+    baba_from_code,
+)
 
-_CENTRAL_KEIBAJO_CODES: frozenset[str] = frozenset(f"{i:02d}" for i in range(1, 11))
 _EXCLUDE_IJO_CODES: frozenset[str] = frozenset({"1", "2", "3"})
 
 
@@ -176,7 +183,7 @@ class RaceData:
         Returns:
             bool: 障害レースなら True
         """
-        return str(self.race_basic_info_df["レース種別"].iloc[0]) == "障害"
+        return str(self.race_basic_info_df["レース種別"].iloc[0]) == RaceShubetsu.SHOGAI
 
     def is_straight_race(self) -> bool:
         """直線コースかどうかを判定する.
@@ -184,7 +191,7 @@ class RaceData:
         Returns:
             bool: 直線コースなら True
         """
-        return str(self.race_basic_info_df["左右"].iloc[0]) == "直"
+        return str(self.race_basic_info_df["左右"].iloc[0]) == Direction.STRAIGHT
 
     def is_turf(self) -> bool:
         """芝レースかどうかを判定する.
@@ -192,7 +199,7 @@ class RaceData:
         Returns:
             bool: 芝レースなら True
         """
-        return str(self.race_basic_info_df["芝ダ"].iloc[0]) == "芝"
+        return str(self.race_basic_info_df["芝ダ"].iloc[0]) == TurfDirt.TURF
 
     def is_dirt(self) -> bool:
         """ダートレースかどうかを判定する.
@@ -200,15 +207,19 @@ class RaceData:
         Returns:
             bool: ダートレースなら True
         """
-        return str(self.race_basic_info_df["芝ダ"].iloc[0]) == "ダ"
+        return str(self.race_basic_info_df["芝ダ"].iloc[0]) == TurfDirt.DIRT
 
     def is_good_to_firm(self) -> bool:
         """良馬場かどうかを判定する.
 
         Returns:
             bool: 良馬場なら True
+
+        Raises:
+            KeibaDomainError: baba_code が "0"〜"4" のいずれでもない場合（馬場状態コードが
+                未取得で空文字の場合を含む）
         """
-        return self.baba_code == "1"
+        return baba_from_code(self.baba_code) == Baba.GOOD
 
     def get_filtered_past_performances(self, uma_ban: int) -> pd.DataFrame:
         """指定馬番の過去成績から機械学習に有効なデータのみを抽出する.
@@ -229,7 +240,7 @@ class RaceData:
         """
         pp_df = self.past_performances_dict[uma_ban]
         filtered = pp_df[
-            pp_df["競馬場コード"].isin(_CENTRAL_KEIBAJO_CODES)
+            pp_df["競馬場コード"].isin(CENTRAL_KEIBAJO_CODES)
             & ~pp_df["異常区分コード"].isin(_EXCLUDE_IJO_CODES)
         ]
         return filtered.reset_index(drop=True)

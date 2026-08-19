@@ -190,7 +190,7 @@ race_data_list = [
 | `is_straight_race()` | なし | `bool` | 直線コースかどうか |
 | `is_turf()` | なし | `bool` | 芝レースかどうか |
 | `is_dirt()` | なし | `bool` | ダートレースかどうか |
-| `is_good_to_firm()` | なし | `bool` | 良馬場かどうか（`baba_code == "1"`） |
+| `is_good_to_firm()` | なし | `bool` | 良馬場かどうか。`baba_code` が `"0"`〜`"4"` のいずれでもない場合（空文字を含む）は `KeibaDomainError` を送出 |
 | `get_filtered_past_performances(uma_ban)` | 馬番（int） | `pd.DataFrame` | 機械学習に有効な過去成績を抽出 |
 
 ### `get_filtered_past_performances` のフィルタリング条件
