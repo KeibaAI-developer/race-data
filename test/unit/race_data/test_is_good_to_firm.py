@@ -13,6 +13,7 @@ from .conftest import PAST_RACE_CODE, make_mock_di, make_race_basic_info_df
 @pytest.mark.parametrize(
     "baba_code, expected",
     [
+        ("0", False),
         ("1", True),
         ("2", False),
         ("3", False),
@@ -20,17 +21,10 @@ from .conftest import PAST_RACE_CODE, make_mock_di, make_race_basic_info_df
     ],
 )
 def test_is_good_to_firm(baba_code: str, expected: bool) -> None:
-    """baba_code が '1' のとき良馬場と判定される."""
+    """baba_code が '1' のとき良馬場、'0'（未設定）を含む他のコードでは False になる."""
     mock_di = make_mock_di()
     race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di, baba_code=baba_code)
     assert race_data.is_good_to_firm() is expected
-
-
-def test_is_good_to_firm_with_unset_baba_code() -> None:
-    """baba_code が '0'（未設定）のとき False になる."""
-    mock_di = make_mock_di()
-    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di, baba_code="0")
-    assert race_data.is_good_to_firm() is False
 
 
 # 準正常系
