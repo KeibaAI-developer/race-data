@@ -8,6 +8,7 @@
 
 - **未来のレース**（予測対象）と**過去のレース**（学習データ取得）の両方に対応
 - レースコードの日付から未来/過去を自動判定（同日は未来扱い）
+- 初期化時は確定データ（レース基本情報・出馬表）のみ取得し、結果・オッズ・過去成績・馬マスタは `fetch_*()` で明示的に取得する遅延取得設計
 - 馬場状態・レース種別・コース形状の判定メソッドを提供
 - 過去成績の機械学習向けフィルタリングをサポート
 
@@ -51,7 +52,7 @@ pip install -e "/path/to/race-data"
 
 ### 基本的な使い方
 
-`DataInterface` インスタンスと 16 桁レースコードを渡して `RaceData` をインスタンス化します。初期化と同時にすべてのデータが取得されます。
+`DataInterface` インスタンスと 16 桁レースコードを渡して `RaceData` をインスタンス化します。初期化時にはレース基本情報・出馬表など確定データのみが取得されます。
 
 ```python
 from keiba_data_interface import DataInterface
@@ -69,6 +70,33 @@ print(rd.is_turf())          # True（芝レース）
 print(rd.is_good_to_firm())  # True（良馬場）
 ```
 
+### 遅延データを取得する
+
+`result_df` / `race_result_info_df` / `payoff_df` / `win_show_odds_df` / `past_performances_dict` / `horse_master_dict` は初期化時には取得されません。各 `fetch_*()` を呼び出した後にのみ参照できます。未取得の状態でアクセスすると `RuntimeError` が発生します。
+
+```python
+rd = RaceData(race_code=race_code, data_interface=di)
+
+try:
+    rd.result_df
+except RuntimeError as exc:
+    print(exc)  # result_df is not fetched. Call fetch_result() first.
+
+rd.fetch_result()             # result_df / race_result_info_df / payoff_df を取得
+rd.fetch_odds()                # win_show_odds_df を取得
+rd.fetch_past_performances()   # past_performances_dict を取得
+rd.fetch_horse_master()        # horse_master_dict を取得
+
+print(rd.result_df)
+print(rd.win_show_odds_df)
+```
+
+すべての遅延データをまとめて取得するには `fetch_all()` を使用します。未来レースでは結果系（`result_df` / `race_result_info_df` / `payoff_df`）は取得されず空の `DataFrame` になります。
+
+```python
+rd.fetch_all()
+```
+
 ### 馬場状態を上書きする
 
 過去レースの分析などで実際とは異なる馬場状態を仮定したい場合、`baba_code` を指定します。
@@ -80,9 +108,11 @@ print(rd.is_good_to_firm())  # False
 
 ### 各馬の過去成績にアクセスする
 
-`past_performances_dict` は馬番をキーとした辞書です。`get_filtered_past_performances` で機械学習に有効なデータ（中央競馬のみ、競走除外除く）に絞り込めます。
+`past_performances_dict` は馬番をキーとした辞書です。`fetch_past_performances()` で取得した後に参照できます。`get_filtered_past_performances` で機械学習に有効なデータ（中央競馬のみ、競走除外除く）に絞り込めます。
 
 ```python
+rd.fetch_past_performances()
+
 # 馬番 1 の有効な過去成績を取得
 filtered_df = rd.get_filtered_past_performances(1)
 print(filtered_df)
@@ -95,19 +125,21 @@ for uma_ban, pp_df in rd.past_performances_dict.items():
 
 ### 各馬のマスタ情報にアクセスする
 
-`horse_master_dict` は血統登録番号をキーとした辞書です。
+`horse_master_dict` は血統登録番号をキーとした辞書です。`fetch_horse_master()` で取得した後に参照できます。
 
 ```python
+rd.fetch_horse_master()
+
 for horse_id, master_df in rd.horse_master_dict.items():
     print(f"血統登録番号 {horse_id}: {master_df['馬名'].iloc[0]}")
 ```
 
 ### 未来レースのオッズを更新する
 
-レース直前に最新オッズへ更新する場合は `update_win_show_odds` を呼び出します。
+レース直前に最新オッズへ更新する場合は `fetch_odds()` を再度呼び出します。
 
 ```python
-rd.update_win_show_odds()
+rd.fetch_odds()
 print(rd.win_show_odds_df)
 ```
 
@@ -134,13 +166,13 @@ race_data_list = [
 | `future_race` | `bool` | 未来のレースかどうか（レース日 ≥ 実行日なら `True`） |
 | `race_basic_info_df` | `pd.DataFrame` | レース基本情報（1行） |
 | `entry_df` | `pd.DataFrame` | 出馬表（常に取得） |
-| `result_df` | `pd.DataFrame` | レース結果（過去レースのみ。未来レースでは空） |
-| `race_result_info_df` | `pd.DataFrame` | ラップタイム・コーナー通過順（過去レースのみ。未来レースでは空） |
-| `payoff_df` | `pd.DataFrame` | 払戻情報（過去レースのみ。未来レースでは空） |
-| `win_show_odds_df` | `pd.DataFrame` | 単複オッズ情報 |
-| `past_performances_dict` | `dict[int, pd.DataFrame]` | 各馬の過去成績辞書（キー: 馬番。対象レース以前のデータのみ） |
-| `horse_master_dict` | `dict[str, pd.DataFrame]` | 各馬のマスタ情報辞書（キー: 血統登録番号） |
-| `num_runners` | `int` | 出走頭数（競走除外などは除く） |
+| `result_df` | `pd.DataFrame` | レース結果。`fetch_result()` 後に参照可能（未取得時は `RuntimeError`）。未来レースでは `fetch_all()` 後に空 |
+| `race_result_info_df` | `pd.DataFrame` | ラップタイム・コーナー通過順。`fetch_result()` 後に参照可能（未取得時は `RuntimeError`）。未来レースでは `fetch_all()` 後に空 |
+| `payoff_df` | `pd.DataFrame` | 払戻情報。`fetch_result()` 後に参照可能（未取得時は `RuntimeError`）。未来レースでは `fetch_all()` 後に空 |
+| `win_show_odds_df` | `pd.DataFrame` | 単複オッズ情報。`fetch_odds()` 後に参照可能（未取得時は `RuntimeError`） |
+| `past_performances_dict` | `dict[int, pd.DataFrame]` | 各馬の過去成績辞書（キー: 馬番。対象レース以前のデータのみ）。`fetch_past_performances()` 後に参照可能（未取得時は `RuntimeError`） |
+| `horse_master_dict` | `dict[str, pd.DataFrame]` | 各馬のマスタ情報辞書（キー: 血統登録番号）。`fetch_horse_master()` 後に参照可能（未取得時は `RuntimeError`） |
+| `num_runners` | `int` | 出走頭数（競走除外などは除く）。`race_basic_info_df` の出走頭数が欠損している場合、初期化時は `0` となり `fetch_odds()` 後に単勝人気の件数から補完される |
 | `valid_horse_num` | `list[int]` | 出走予定の馬番リスト（異常区分コードが1,2,3の馬を除外）。昇順 |
 
 
@@ -148,7 +180,11 @@ race_data_list = [
 
 | メソッド | 引数 | 戻り値 | 説明 |
 |---|---|---|---|
-| `update_win_show_odds()` | なし | `None` | `win_show_odds_df` を最新オッズで上書き |
+| `fetch_result()` | なし | `None` | `result_df` / `race_result_info_df` / `payoff_df` を取得 |
+| `fetch_odds()` | なし | `None` | `win_show_odds_df` を取得（再取得も可）。出走頭数欠損時は `num_runners` を補完 |
+| `fetch_past_performances()` | なし | `None` | `past_performances_dict` を取得 |
+| `fetch_horse_master()` | なし | `None` | `horse_master_dict` を取得 |
+| `fetch_all()` | なし | `None` | 上記すべてを取得。未来レースでは結果系は空 `DataFrame` になる |
 | `is_make_debut()` | なし | `bool` | 新馬戦かどうか |
 | `is_steeple_chase()` | なし | `bool` | 障害レースかどうか |
 | `is_straight_race()` | なし | `bool` | 直線コースかどうか |

@@ -11,9 +11,10 @@ from .conftest import PAST_RACE_CODE, make_mock_di, make_past_performances_df
 
 def test_filters_out_non_central(past_race_data: RaceData) -> None:
     """地方競馬（競馬場コード '00'）は除外される."""
-    past_race_data.past_performances_dict[1] = make_past_performances_df(
+    past_race_data.data_interface.get_past_performances.return_value = make_past_performances_df(
         keibajo_codes=["05", "00"],
     )
+    past_race_data.fetch_past_performances()
     result = past_race_data.get_filtered_past_performances(1)
     assert len(result) == 1
     assert result["競馬場コード"].iloc[0] == "05"
@@ -21,9 +22,10 @@ def test_filters_out_non_central(past_race_data: RaceData) -> None:
 
 def test_filters_out_scratched(past_race_data: RaceData) -> None:
     """出走取消（異常区分コード '1'）は除外される."""
-    past_race_data.past_performances_dict[1] = make_past_performances_df(
+    past_race_data.data_interface.get_past_performances.return_value = make_past_performances_df(
         ijo_codes=["0", "1"],
     )
+    past_race_data.fetch_past_performances()
     result = past_race_data.get_filtered_past_performances(1)
     assert len(result) == 1
     assert result["異常区分コード"].iloc[0] == "0"
@@ -31,27 +33,30 @@ def test_filters_out_scratched(past_race_data: RaceData) -> None:
 
 def test_filters_out_excluded_by_starters(past_race_data: RaceData) -> None:
     """発走除外（異常区分コード '2'）は除外される."""
-    past_race_data.past_performances_dict[1] = make_past_performances_df(
+    past_race_data.data_interface.get_past_performances.return_value = make_past_performances_df(
         ijo_codes=["0", "2"],
     )
+    past_race_data.fetch_past_performances()
     result = past_race_data.get_filtered_past_performances(1)
     assert len(result) == 1
 
 
 def test_filters_out_excluded_by_stewards(past_race_data: RaceData) -> None:
     """競走除外（異常区分コード '3'）は除外される."""
-    past_race_data.past_performances_dict[1] = make_past_performances_df(
+    past_race_data.data_interface.get_past_performances.return_value = make_past_performances_df(
         ijo_codes=["0", "3"],
     )
+    past_race_data.fetch_past_performances()
     result = past_race_data.get_filtered_past_performances(1)
     assert len(result) == 1
 
 
 def test_keeps_normal_and_fall_to_finish(past_race_data: RaceData) -> None:
     """正常（'0'）と競走中止（'4'）は残る."""
-    past_race_data.past_performances_dict[1] = make_past_performances_df(
+    past_race_data.data_interface.get_past_performances.return_value = make_past_performances_df(
         ijo_codes=["0", "4"],
     )
+    past_race_data.fetch_past_performances()
     result = past_race_data.get_filtered_past_performances(1)
     assert len(result) == 2
 
@@ -67,15 +72,17 @@ def test_all_central_codes_accepted() -> None:
         )
     )
     race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
+    race_data.fetch_past_performances()
     result = race_data.get_filtered_past_performances(1)
     assert len(result) == 10
 
 
 def test_index_is_reset(past_race_data: RaceData) -> None:
     """フィルタリング後のインデックスがリセットされる."""
-    past_race_data.past_performances_dict[1] = make_past_performances_df(
+    past_race_data.data_interface.get_past_performances.return_value = make_past_performances_df(
         ijo_codes=["1", "0"],
     )
+    past_race_data.fetch_past_performances()
     result = past_race_data.get_filtered_past_performances(1)
     assert list(result.index) == [0]
 
@@ -85,5 +92,12 @@ def test_index_is_reset(past_race_data: RaceData) -> None:
 
 def test_raises_key_error_for_unknown_uma_ban(past_race_data: RaceData) -> None:
     """存在しない馬番を指定すると KeyError が発生する."""
+    past_race_data.fetch_past_performances()
     with pytest.raises(KeyError):
         past_race_data.get_filtered_past_performances(99)
+
+
+def test_raises_runtime_error_before_fetch(past_race_data: RaceData) -> None:
+    """fetch_past_performances 前に RuntimeError が発生する."""
+    with pytest.raises(RuntimeError, match="Call fetch_past_performances"):
+        past_race_data.get_filtered_past_performances(1)
