@@ -8,8 +8,8 @@ on:
 
 jobs:
   ci:
-    uses: KeibaAI-developer/library-workflow/.github/workflows/ci.yml@main
+    uses: KeibaAI-developer/library-workflow/.github/workflows/ci.yml@develop
     with:
       package_name: race_data
       repo_name: race-data
-      dependency_library: 'keiba-domain@develop keiba-data-interface'
+      dependency_library: 'keiba-domain@develop keiba-data-interface@develop'
