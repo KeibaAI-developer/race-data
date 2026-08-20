@@ -12,4 +12,4 @@ jobs:
     with:
       package_name: race_data
       repo_name: race-data
-      dependency_library: 'keiba-data-interface keiba-domain@develop'
+      dependency_library: 'keiba-domain@develop keiba-data-interface'
