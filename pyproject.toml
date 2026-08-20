@@ -28,6 +28,7 @@ dependencies = [
     # mypyの判定結果がKeibaAI本体（pandas 2.3系）とずれる。3.0を除外する
     "pandas>=2.0.0,<3.0.0",
     "keiba-data-interface>=1.0.0",
+    "keiba-domain>=0.1.0",
 ]
 
 [project.optional-dependencies]
