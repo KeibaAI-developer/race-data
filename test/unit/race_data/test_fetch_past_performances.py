@@ -1,10 +1,16 @@
 """RaceData.fetch_past_performances のテスト."""
 
+import pandas as pd
 import pytest
 
 from race_data.race_data import RaceData
 
-from .conftest import PAST_RACE_CODE, make_mock_di, make_past_performances_df
+from .conftest import (
+    PAST_RACE_CODE,
+    make_entry_df,
+    make_mock_di,
+    make_past_performances_df,
+)
 
 # 正常系
 
@@ -38,6 +44,33 @@ def test_fetch_past_performances_passes_all_horse_ids(past_race_data: RaceData) 
 
     passed = di.get_past_performances_bulk.call_args.args[0]
     assert sorted(passed) == sorted(expected)
+
+
+def test_fetch_past_performances_maps_each_horse_to_its_own_uma_ban() -> None:
+    """馬番と過去成績の対応が入れ替わらない.
+
+    一括取得は馬IDをキーに返すため、馬番との対応づけを誤ると別の馬の過去成績が
+    入る。カラム構成・dtype・行順・indexまで含めて一致することを検証する。
+    """
+    horse_ids = ["2019105219", "2020103656", "2021190001"]
+    entry_df = make_entry_df(uma_bans=[1, 2, 3], horse_ids=horse_ids)
+    # 馬ごとに異なる過去成績を用意する（レースコードの下2桁で見分ける）
+    by_horse_id = {
+        horse_id: make_past_performances_df(
+            race_codes=[f"20221126050508{index}1", f"20211126050508{index}1"],
+        )
+        for index, horse_id in enumerate(horse_ids)
+    }
+    mock_di = make_mock_di(entry_df=entry_df, past_performances_by_horse_id=by_horse_id)
+    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
+
+    race_data.fetch_past_performances()
+
+    result = race_data.past_performances_dict
+    assert list(result) == [1, 2, 3]
+    for uma_ban, horse_id in zip([1, 2, 3], horse_ids, strict=True):
+        expected = by_horse_id[horse_id].reset_index(drop=True)
+        pd.testing.assert_frame_equal(result[uma_ban], expected)
 
 
 def test_fetch_past_performances_excludes_future_races() -> None:
