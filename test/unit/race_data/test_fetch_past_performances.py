@@ -15,11 +15,29 @@ def test_fetch_past_performances_sets_dict(past_race_data: RaceData) -> None:
     assert set(past_race_data.past_performances_dict.keys()) == {1, 2, 3}
 
 
-def test_fetch_past_performances_calls_interface_per_horse(past_race_data: RaceData) -> None:
-    """fetch_past_performances が馬ごとに get_past_performances を呼ぶ."""
+def test_fetch_past_performances_fetches_all_horses_at_once(past_race_data: RaceData) -> None:
+    """fetch_past_performances が全出走馬ぶんを1回でまとめて取得する.
+
+    馬ごとに取得すると頭数ぶんのクエリが発行される。血統登録番号だけの絞り込みは
+    主キーの前方一致にならず、1頭あたり約276msかかる。
+    """
     di = past_race_data.data_interface
+
     past_race_data.fetch_past_performances()
-    assert di.get_past_performances.call_count == 3
+
+    di.get_past_performances_bulk.assert_called_once()
+    di.get_past_performances.assert_not_called()
+
+
+def test_fetch_past_performances_passes_all_horse_ids(past_race_data: RaceData) -> None:
+    """fetch_past_performances が全出走馬の血統登録番号を渡す."""
+    di = past_race_data.data_interface
+    expected = [str(horse_id) for horse_id in past_race_data.entry_df["血統登録番号"]]
+
+    past_race_data.fetch_past_performances()
+
+    passed = di.get_past_performances_bulk.call_args.args[0]
+    assert sorted(passed) == sorted(expected)
 
 
 def test_fetch_past_performances_excludes_future_races() -> None:

@@ -295,16 +295,34 @@ class RaceData:
         return sorted(valid["馬番"].tolist())
 
     def _build_past_performances_dict(self) -> dict[int, pd.DataFrame]:
-        """entry_df の各馬の過去成績辞書を構築する."""
+        """entry_df の各馬の過去成績辞書を構築する.
+
+        出走馬ごとに取得すると頭数ぶんのクエリが発行される。umagoto_race_johoの主キーは
+        (レースコード, 血統登録番号) であり、血統登録番号だけで絞り込むと主キーの前方一致に
+        ならずインデックスを頭から走査するため、1頭あたり約276msかかる。まとめて取得する。
+
+        今レースより前のレースへの絞り込みは、取得後に馬ごとへ当てる。一括取得の時点で
+        絞り込まないのは、同じ馬が別のRaceDataから参照されたときにレースコードの違いで
+        結果が変わってしまうため。
+        """
         sorted_entry = self.entry_df.sort_values("馬番").reset_index(drop=True)
-        past_performances: dict[int, pd.DataFrame] = {}
-        for _, row in sorted_entry.iterrows():
-            horse_id = str(row["血統登録番号"])
-            uma_ban = int(row["馬番"])
-            pp_df = self.data_interface.get_past_performances(horse_id)
-            pp_df = pp_df[pp_df["レースコード"] < self.race_code].reset_index(drop=True)
-            past_performances[uma_ban] = pp_df
-        return past_performances
+        horse_ids = [str(row["血統登録番号"]) for _, row in sorted_entry.iterrows()]
+        pp_by_horse_id = self.data_interface.get_past_performances_bulk(horse_ids)
+        return {
+            int(row["馬番"]): self._filter_past_races(pp_by_horse_id[str(row["血統登録番号"])])
+            for _, row in sorted_entry.iterrows()
+        }
+
+    def _filter_past_races(self, pp_df: pd.DataFrame) -> pd.DataFrame:
+        """過去成績を今レースより前のレースだけに絞り込む.
+
+        Args:
+            pp_df (pd.DataFrame): 1頭分の過去成績
+
+        Returns:
+            pd.DataFrame: 今レースより前のレースだけを残した過去成績
+        """
+        return pp_df[pp_df["レースコード"] < self.race_code].reset_index(drop=True)
 
     def _build_horse_master_dict(self) -> dict[str, pd.DataFrame]:
         """entry_df の各馬のマスタ情報辞書を構築する."""

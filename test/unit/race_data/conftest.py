@@ -125,6 +125,12 @@ def make_mock_di(
     mock.get_past_performances.return_value = (
         past_performances_df if past_performances_df is not None else make_past_performances_df()
     )
+    # 一括取得は指定した馬IDを必ずキーに含める。テストが
+    # get_past_performances.return_value を差し替えたときに追随できるよう、
+    # 呼び出し時点の値を読む
+    mock.get_past_performances_bulk.side_effect = lambda horse_ids: {
+        horse_id: mock.get_past_performances.return_value.copy() for horse_id in horse_ids
+    }
     mock.get_horse_master.return_value = (
         horse_master_df if horse_master_df is not None else make_horse_master_df()
     )
