@@ -32,9 +32,10 @@ class RaceData:
         future_race (bool): 未来のレースかどうか
         race_basic_info_df (pd.DataFrame): レース基本情報（1行）
         entry_df (pd.DataFrame): 出馬表（常に取得）
-        result_df (pd.DataFrame): レース結果。fetch_result 後に参照可能
-        race_result_info_df (pd.DataFrame): ラップタイム・コーナー通過順。fetch_result 後に参照可能
-        payoff_df (pd.DataFrame): 払戻情報。fetch_result 後に参照可能
+        result_df (pd.DataFrame): レース結果。fetch_race_result または fetch_result 後に参照可能
+        race_result_info_df (pd.DataFrame): ラップタイム・コーナー通過順。
+            fetch_race_result_info または fetch_result 後に参照可能
+        payoff_df (pd.DataFrame): 払戻情報。fetch_payoff または fetch_result 後に参照可能
         win_show_odds_df (pd.DataFrame): 単複オッズ情報。fetch_odds 後に参照可能
         past_performances_dict (dict[int, pd.DataFrame]): 各馬の過去成績辞書。
             fetch_past_performances 後に参照可能
@@ -69,11 +70,34 @@ class RaceData:
         if not self.baba_code:
             self.baba_code = self._get_baba_code()
 
-    def fetch_result(self) -> None:
-        """結果系データを取得する."""
+    def fetch_race_result(self) -> None:
+        """レース結果を取得する."""
         self._result_df = self.data_interface.get_result(self.race_code)
+
+    def fetch_race_result_info(self) -> None:
+        """ラップタイム・コーナー通過順を取得する."""
         self._race_result_info_df = self.data_interface.get_race_result_info(self.race_code)
+
+    def fetch_payoff(self) -> None:
+        """払戻情報を取得する."""
         self._payoff_df = self.data_interface.get_payoff(self.race_code)
+
+    def fetch_result(self) -> None:
+        """結果系データをまとめて取得する.
+
+        レース結果・ラップタイム/コーナー通過順・払戻情報の3つを取得する。
+        scrapingプロバイダーではこれらが同じページにあるため、個別に取得するより
+        まとめて取得するほうが効率がよい。
+
+        一部しか使わない場合は fetch_race_result / fetch_race_result_info /
+        fetch_payoff を個別に呼ぶ。
+
+        取得済みであっても取り直す。取得済みを理由に省略すると、値が変わりうる
+        データを再取得できなくなるため。
+        """
+        self.fetch_race_result()
+        self.fetch_race_result_info()
+        self.fetch_payoff()
 
     def fetch_odds(self) -> None:
         """単複オッズを取得する."""
@@ -106,10 +130,12 @@ class RaceData:
         """レース結果を返す.
 
         Raises:
-            RuntimeError: fetch_result が未実行の場合
+            RuntimeError: fetch_race_result も fetch_result も未実行の場合
         """
         if self._result_df is None:
-            raise RuntimeError("result_df is not fetched. Call fetch_result() first.")
+            raise RuntimeError(
+                "result_df is not fetched. Call fetch_race_result() or fetch_result() first."
+            )
         return self._result_df
 
     @property
@@ -117,10 +143,13 @@ class RaceData:
         """ラップタイム・コーナー通過順を返す.
 
         Raises:
-            RuntimeError: fetch_result が未実行の場合
+            RuntimeError: fetch_race_result_info も fetch_result も未実行の場合
         """
         if self._race_result_info_df is None:
-            raise RuntimeError("race_result_info_df is not fetched. Call fetch_result() first.")
+            raise RuntimeError(
+                "race_result_info_df is not fetched. "
+                "Call fetch_race_result_info() or fetch_result() first."
+            )
         return self._race_result_info_df
 
     @property
@@ -128,10 +157,12 @@ class RaceData:
         """払戻情報を返す.
 
         Raises:
-            RuntimeError: fetch_result が未実行の場合
+            RuntimeError: fetch_payoff も fetch_result も未実行の場合
         """
         if self._payoff_df is None:
-            raise RuntimeError("payoff_df is not fetched. Call fetch_result() first.")
+            raise RuntimeError(
+                "payoff_df is not fetched. Call fetch_payoff() or fetch_result() first."
+            )
         return self._payoff_df
 
     @property

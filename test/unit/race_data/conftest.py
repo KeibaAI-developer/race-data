@@ -138,6 +138,12 @@ def mock_di_past() -> MagicMock:
 
 
 @pytest.fixture()
+def mock_di_past2() -> MagicMock:
+    """過去レース用モック DataInterface（比較用の別インスタンス）."""
+    return make_mock_di()
+
+
+@pytest.fixture()
 def mock_di_future() -> MagicMock:
     """未来レース用モック DataInterface."""
     return make_mock_di()
@@ -147,6 +153,12 @@ def mock_di_future() -> MagicMock:
 def past_race_data(mock_di_past: MagicMock) -> RaceData:
     """過去レースの RaceData インスタンス."""
     return RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di_past)
+
+
+@pytest.fixture()
+def another_past_race_data(mock_di_past2: MagicMock) -> RaceData:
+    """過去レースの RaceData インスタンス（比較用の別インスタンス）."""
+    return RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di_past2)
 
 
 @pytest.fixture()
