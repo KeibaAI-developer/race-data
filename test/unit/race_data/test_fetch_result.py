@@ -40,18 +40,23 @@ def test_fetch_result_calls_interface(past_race_data: RaceData) -> None:
 
 
 def test_result_df_raises_before_fetch(past_race_data: RaceData) -> None:
-    """fetch_result 前に result_df 参照で RuntimeError が発生する."""
-    with pytest.raises(RuntimeError, match="Call fetch_result"):
+    """取得前に result_df 参照で RuntimeError が発生する.
+
+    個別取得と一括取得のどちらを呼べばよいかがメッセージから分かること。
+    """
+    with pytest.raises(RuntimeError, match="Call fetch_race_result\\(\\) or fetch_result"):
         _ = past_race_data.result_df
 
 
 def test_race_result_info_df_raises_before_fetch(past_race_data: RaceData) -> None:
-    """fetch_result 前に race_result_info_df 参照で RuntimeError が発生する."""
-    with pytest.raises(RuntimeError, match="Call fetch_result"):
+    """取得前に race_result_info_df 参照で RuntimeError が発生する."""
+    with pytest.raises(
+        RuntimeError, match="Call fetch_race_result_info\\(\\) or fetch_result"
+    ):
         _ = past_race_data.race_result_info_df
 
 
 def test_payoff_df_raises_before_fetch(past_race_data: RaceData) -> None:
-    """fetch_result 前に payoff_df 参照で RuntimeError が発生する."""
-    with pytest.raises(RuntimeError, match="Call fetch_result"):
+    """取得前に payoff_df 参照で RuntimeError が発生する."""
+    with pytest.raises(RuntimeError, match="Call fetch_payoff\\(\\) or fetch_result"):
         _ = past_race_data.payoff_df
