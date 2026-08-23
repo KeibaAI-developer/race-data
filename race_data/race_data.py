@@ -325,12 +325,12 @@ class RaceData:
         return pp_df[pp_df["レースコード"] < self.race_code].reset_index(drop=True)
 
     def _build_horse_master_dict(self) -> dict[str, pd.DataFrame]:
-        """entry_df の各馬のマスタ情報辞書を構築する."""
-        horse_master: dict[str, pd.DataFrame] = {}
-        for horse_id in self.entry_df["血統登録番号"].unique():
-            horse_id_str = str(horse_id)
-            horse_master[horse_id_str] = self.data_interface.get_horse_master(horse_id_str)
-        return horse_master
+        """entry_df の各馬のマスタ情報辞書を構築する.
+
+        出走馬ごとに取得すると頭数ぶんの往復と変換が積み上がる。まとめて取得する。
+        """
+        horse_ids = [str(horse_id) for horse_id in self.entry_df["血統登録番号"].unique()]
+        return self.data_interface.get_horse_master_bulk(horse_ids)
 
     def _get_baba_code(self) -> str:
         """race_basic_info_df から馬場状態コードを取得する."""
