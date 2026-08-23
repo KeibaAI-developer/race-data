@@ -30,8 +30,8 @@ def test_fetch_horse_master_fetches_all_horses_at_once(past_race_data: RaceData)
     di.get_horse_master.assert_not_called()
 
 
-def test_fetch_horse_master_passes_unique_horse_ids(past_race_data: RaceData) -> None:
-    """fetch_horse_master が重複を除いた血統登録番号を渡す."""
+def test_fetch_horse_master_passes_horse_ids_in_entry_order(past_race_data: RaceData) -> None:
+    """fetch_horse_master が血統登録番号を出馬表の順で渡す."""
     di = past_race_data.data_interface
     expected_horse_ids = list(make_entry_df()["血統登録番号"])
 
@@ -39,6 +39,25 @@ def test_fetch_horse_master_passes_unique_horse_ids(past_race_data: RaceData) ->
 
     passed = di.get_horse_master_bulk.call_args.args[0]
     assert passed == expected_horse_ids
+
+
+def test_fetch_horse_master_passes_duplicated_horse_id_once() -> None:
+    """同じ馬が複数の馬番に現れても血統登録番号を1回だけ渡す.
+
+    重複を除かずに渡すと同じ馬を二重に取得する。初出の順序も保つ。
+    """
+    entry_df = make_entry_df(
+        uma_bans=[1, 2, 3],
+        horse_ids=["2019105219", "2020103656", "2019105219"],
+    )
+    mock_di = make_mock_di(entry_df=entry_df)
+    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
+
+    race_data.fetch_horse_master()
+
+    passed = mock_di.get_horse_master_bulk.call_args.args[0]
+    assert passed == ["2019105219", "2020103656"]
+    assert list(race_data.horse_master_dict) == ["2019105219", "2020103656"]
 
 
 def test_fetch_horse_master_maps_each_horse_to_its_own_master() -> None:
