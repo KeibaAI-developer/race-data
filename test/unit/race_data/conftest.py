@@ -101,6 +101,7 @@ def make_mock_di(
     payoff_df: pd.DataFrame | None = None,
     past_performances_df: pd.DataFrame | None = None,
     horse_master_df: pd.DataFrame | None = None,
+    past_performances_by_horse_id: dict[str, pd.DataFrame] | None = None,
 ) -> MagicMock:
     """モック DataInterface を作成する."""
     mock = MagicMock(spec=DataInterface)
@@ -125,6 +126,31 @@ def make_mock_di(
     mock.get_past_performances.return_value = (
         past_performances_df if past_performances_df is not None else make_past_performances_df()
     )
+
+    def get_past_performances_bulk(horse_ids: list[str]) -> dict[str, pd.DataFrame]:
+        """指定された各馬の過去成績を返す.
+
+        一括取得は指定した馬IDを必ずキーに含める契約である。馬ごとの過去成績が
+        指定されていれば馬IDで引き、指定されていなければ
+        `get_past_performances.return_value` を全馬へ返す。後者は呼び出し時点の値を
+        読むため、テストが `get_past_performances.return_value` を差し替えても追随する。
+
+        Args:
+            horse_ids (list[str]): 馬ID（血統登録番号）のリスト
+
+        Returns:
+            dict[str, pd.DataFrame]: 馬ID → 過去成績
+        """
+        if past_performances_by_horse_id is not None:
+            return {
+                horse_id: past_performances_by_horse_id[horse_id].copy()
+                for horse_id in horse_ids
+            }
+        return {
+            horse_id: mock.get_past_performances.return_value.copy() for horse_id in horse_ids
+        }
+
+    mock.get_past_performances_bulk.side_effect = get_past_performances_bulk
     mock.get_horse_master.return_value = (
         horse_master_df if horse_master_df is not None else make_horse_master_df()
     )
