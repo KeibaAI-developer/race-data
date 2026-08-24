@@ -304,6 +304,10 @@ class RaceData:
         今レースより前のレースへの絞り込みは、取得後に馬ごとへ当てる。一括取得の時点で
         絞り込まないのは、同じ馬が別のRaceDataから参照されたときにレースコードの違いで
         結果が変わってしまうため。
+
+        Returns:
+            dict[int, pd.DataFrame]: 馬番 → 今レースより前の過去成績。
+                キーはentry_dfの馬番昇順
         """
         sorted_entry = self.entry_df.sort_values("馬番").reset_index(drop=True)
         horse_ids = [str(row["血統登録番号"]) for _, row in sorted_entry.iterrows()]
@@ -325,12 +329,20 @@ class RaceData:
         return pp_df[pp_df["レースコード"] < self.race_code].reset_index(drop=True)
 
     def _build_horse_master_dict(self) -> dict[str, pd.DataFrame]:
-        """entry_df の各馬のマスタ情報辞書を構築する."""
-        horse_master: dict[str, pd.DataFrame] = {}
-        for horse_id in self.entry_df["血統登録番号"].unique():
-            horse_id_str = str(horse_id)
-            horse_master[horse_id_str] = self.data_interface.get_horse_master(horse_id_str)
-        return horse_master
+        """entry_df の各馬のマスタ情報辞書を構築する.
+
+        出走馬ごとに取得すると頭数ぶんの往復と変換が積み上がる。まとめて取得する。
+
+        一括取得の戻り値をそのまま返さず、要求した馬IDで組み立て直す。キーの集合と
+        並びを取得側の実装に委ねないため。
+
+        Returns:
+            dict[str, pd.DataFrame]: 馬ID（血統登録番号）→ 競走馬マスタ（1行）。
+                キーはentry_dfの出現順で重複を除いたもの
+        """
+        horse_ids = [str(horse_id) for horse_id in self.entry_df["血統登録番号"].unique()]
+        horse_master_by_horse_id = self.data_interface.get_horse_master_bulk(horse_ids)
+        return {horse_id: horse_master_by_horse_id[horse_id] for horse_id in horse_ids}
 
     def _get_baba_code(self) -> str:
         """race_basic_info_df から馬場状態コードを取得する."""
