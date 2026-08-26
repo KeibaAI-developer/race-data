@@ -72,7 +72,7 @@ print(rd.is_good_to_firm())  # True（良馬場）
 
 ### 遅延データを取得する
 
-`result_df` / `race_result_info_df` / `payoff_df` / `win_show_odds_df` / `past_performances_dict` / `horse_master_dict` は初期化時には取得されません。各 `fetch_*()` を呼び出した後にのみ参照できます。未取得の状態でアクセスすると `RuntimeError` が発生します。
+`result_df` / `race_result_info_df` / `payoff_df` / `win_show_odds_df` / `win_show_votes_df` / `past_performances_dict` / `horse_master_dict` は初期化時には取得されません。各 `fetch_*()` を呼び出した後にのみ参照できます。未取得の状態でアクセスすると `RuntimeError` が発生します。
 
 ```python
 rd = RaceData(race_code=race_code, data_interface=di)
@@ -84,6 +84,7 @@ except RuntimeError as exc:
 
 rd.fetch_result()             # result_df / race_result_info_df / payoff_df を取得
 rd.fetch_odds()                # win_show_odds_df を取得
+rd.fetch_votes()               # win_show_votes_df を取得（mykeibadb のみ。fetch_all には含まれない）
 rd.fetch_past_performances()   # past_performances_dict を取得
 rd.fetch_horse_master()        # horse_master_dict を取得
 
@@ -184,6 +185,7 @@ race_data_list = [
 | `race_result_info_df` | `pd.DataFrame` | ラップタイム・コーナー通過順。`fetch_race_result_info()` または `fetch_result()` 後に参照可能（未取得時は `RuntimeError`）。未来レースでは `fetch_all()` 後に空 |
 | `payoff_df` | `pd.DataFrame` | 払戻情報。`fetch_payoff()` または `fetch_result()` 後に参照可能（未取得時は `RuntimeError`）。未来レースでは `fetch_all()` 後に空 |
 | `win_show_odds_df` | `pd.DataFrame` | 単複オッズ情報。`fetch_odds()` 後に参照可能（未取得時は `RuntimeError`） |
+| `win_show_votes_df` | `pd.DataFrame` | 単複票数情報（`WIN_SHOW_VOTES_COLUMNS`、馬番順）。`fetch_votes()` 後に参照可能（未取得時は `RuntimeError`） |
 | `past_performances_dict` | `dict[int, pd.DataFrame]` | 各馬の過去成績辞書（キー: 馬番。対象レース以前のデータのみ）。`fetch_past_performances()` 後に参照可能（未取得時は `RuntimeError`） |
 | `horse_master_dict` | `dict[str, pd.DataFrame]` | 各馬のマスタ情報辞書（キー: 血統登録番号）。`fetch_horse_master()` 後に参照可能（未取得時は `RuntimeError`） |
 | `num_runners` | `int` | 出走頭数（競走除外などは除く）。`race_basic_info_df` の出走頭数が欠損している場合、初期化時は `0` となり `fetch_odds()` 後に単勝人気の件数から補完される |
@@ -199,6 +201,7 @@ race_data_list = [
 | `fetch_payoff()` | なし | `None` | `payoff_df` を取得 |
 | `fetch_result()` | なし | `None` | `result_df` / `race_result_info_df` / `payoff_df` をまとめて取得 |
 | `fetch_odds()` | なし | `None` | `win_show_odds_df` を取得（再取得も可）。出走頭数欠損時は `num_runners` を補完 |
+| `fetch_votes()` | なし | `None` | `win_show_votes_df` を取得。scraping プロバイダーは `DataNotFoundError`。`fetch_all()` には含まれない |
 | `fetch_past_performances()` | なし | `None` | `past_performances_dict` を取得 |
 | `fetch_horse_master()` | なし | `None` | `horse_master_dict` を取得 |
 | `fetch_all()` | なし | `None` | 上記すべてを取得。未来レースでは結果系は空 `DataFrame` になる |

@@ -37,6 +37,7 @@ class RaceData:
             fetch_race_result_info または fetch_result 後に参照可能
         payoff_df (pd.DataFrame): 払戻情報。fetch_payoff または fetch_result 後に参照可能
         win_show_odds_df (pd.DataFrame): 単複オッズ情報。fetch_odds 後に参照可能
+        win_show_votes_df (pd.DataFrame): 単複票数情報。fetch_votes 後に参照可能
         past_performances_dict (dict[int, pd.DataFrame]): 各馬の過去成績辞書。
             fetch_past_performances 後に参照可能
         horse_master_dict (dict[str, pd.DataFrame]): 各馬のマスタ情報辞書。
@@ -57,6 +58,7 @@ class RaceData:
     _race_result_info_df: pd.DataFrame | None = field(init=False, default=None)
     _payoff_df: pd.DataFrame | None = field(init=False, default=None)
     _win_show_odds_df: pd.DataFrame | None = field(init=False, default=None)
+    _win_show_votes_df: pd.DataFrame | None = field(init=False, default=None)
     _past_performances_dict: dict[int, pd.DataFrame] | None = field(init=False, default=None)
     _horse_master_dict: dict[str, pd.DataFrame] | None = field(init=False, default=None)
 
@@ -104,6 +106,17 @@ class RaceData:
         self._win_show_odds_df = self.data_interface.get_win_show_odds(self.race_code)
         if pd.isna(self.race_basic_info_df["出走頭数"].iloc[0]):
             self.num_runners = int(self._win_show_odds_df["単勝人気"].notna().sum())
+
+    def fetch_votes(self) -> None:
+        """単勝・複勝の票数を取得する.
+
+        複勝支持率を票数から求めるために使う。fetch_all には含めない。票数は予測時に
+        明示的に取るデータであり、scraping プロバイダーでは取得できない（DataNotFoundError）ため。
+
+        Raises:
+            DataNotFoundError: 該当レースの票数が存在しない、または scraping プロバイダーの場合
+        """
+        self._win_show_votes_df = self.data_interface.get_win_show_votes(self.race_code)
 
     def fetch_past_performances(self) -> None:
         """各馬の過去成績辞書を取得する."""
@@ -175,6 +188,17 @@ class RaceData:
         if self._win_show_odds_df is None:
             raise RuntimeError("win_show_odds_df is not fetched. Call fetch_odds() first.")
         return self._win_show_odds_df
+
+    @property
+    def win_show_votes_df(self) -> pd.DataFrame:
+        """単複票数情報を返す.
+
+        Raises:
+            RuntimeError: fetch_votes が未実行の場合
+        """
+        if self._win_show_votes_df is None:
+            raise RuntimeError("win_show_votes_df is not fetched. Call fetch_votes() first.")
+        return self._win_show_votes_df
 
     @property
     def past_performances_dict(self) -> dict[int, pd.DataFrame]:
