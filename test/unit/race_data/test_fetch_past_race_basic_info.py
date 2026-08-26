@@ -126,3 +126,19 @@ def test_property_before_fetch_raises(past_race_data: RaceData) -> None:
     """fetch_past_race_basic_info 前に past_race_basic_info_df を参照すると RuntimeError."""
     with pytest.raises(RuntimeError, match="Call fetch_past_race_basic_info"):
         _ = past_race_data.past_race_basic_info_df
+
+
+def test_refetching_past_performances_resets_past_race_basic_info(
+    past_race_data: RaceData,
+) -> None:
+    """fetch_past_performances を再実行すると past_race_basic_info_df は未取得状態に戻る.
+
+    過去成績から組み立てた値が、更新後の過去成績と食い違ったまま残らないようにする。
+    """
+    past_race_data.fetch_past_performances()
+    past_race_data.fetch_past_race_basic_info()
+
+    past_race_data.fetch_past_performances()
+
+    with pytest.raises(RuntimeError, match="Call fetch_past_race_basic_info"):
+        _ = past_race_data.past_race_basic_info_df

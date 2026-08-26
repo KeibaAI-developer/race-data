@@ -110,8 +110,13 @@ class RaceData:
             self.num_runners = int(self._win_show_odds_df["単勝人気"].notna().sum())
 
     def fetch_past_performances(self) -> None:
-        """各馬の過去成績辞書を取得する."""
+        """各馬の過去成績辞書を取得する.
+
+        過去走のレース基本情報（past_race_basic_info_df）は過去成績から組み立てるため、
+        再取得時は未取得状態へ戻す。古い過去成績に基づく値が残らないようにする。
+        """
         self._past_performances_dict = self._build_past_performances_dict()
+        self._past_race_basic_info_df = None
 
     def fetch_past_race_basic_info(self) -> None:
         """全出走馬の過去走のレース基本情報を一括取得する.
