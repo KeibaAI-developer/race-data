@@ -204,7 +204,7 @@ race_data_list = [
 | `fetch_votes()` | なし | `None` | `win_show_votes_df` を取得。scraping プロバイダーは `DataNotFoundError`。`fetch_all()` には含まれない |
 | `fetch_past_performances()` | なし | `None` | `past_performances_dict` を取得 |
 | `fetch_horse_master()` | なし | `None` | `horse_master_dict` を取得 |
-| `fetch_all()` | なし | `None` | 上記すべてを取得。未来レースでは結果系は空 `DataFrame` になる |
+| `fetch_all()` | なし | `None` | `win_show_votes_df` を除く上記データを取得。未来レースでは結果系は空 `DataFrame` になる |
 | `is_make_debut()` | なし | `bool` | 新馬戦かどうか |
 | `is_steeple_chase()` | なし | `bool` | 障害レースかどうか |
 | `is_straight_race()` | なし | `bool` | 直線コースかどうか |
