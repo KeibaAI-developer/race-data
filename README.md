@@ -217,7 +217,7 @@ race_data_list = [
 | `fetch_odds()` | なし | `None` | `win_show_odds_df` を取得（再取得も可）。出走頭数欠損時は `num_runners` を補完 |
 | `fetch_votes()` | なし | `None` | `win_show_votes_df` を取得。票数に対応していないプロバイダー（scraping）は `DataNotFoundError` |
 | `fetch_past_performances()` | なし | `None` | `past_performances_dict` を取得 |
-| `fetch_past_race_basic_info()` | なし | `None` | `past_race_basic_info_df` を取得（`fetch_past_performances()` の後に呼ぶ。scraping プロバイダーは `DataNotFoundError`） |
+| `fetch_past_race_basic_info()` | なし | `None` | `past_race_basic_info_df` を取得（`fetch_past_performances()` の後に呼ぶ。scraping プロバイダーは `UnsupportedOperationError`） |
 | `fetch_horse_master()` | なし | `None` | `horse_master_dict` を取得 |
 | `fetch_all()` | なし | `None` | 上記すべてを取得。`win_show_votes_df` は `supports_votes` が真のプロバイダーでのみ取得する。未来レースでは結果系は空 `DataFrame` になる。`past_race_basic_info_df` は `supports_bulk` が真のプロバイダーでのみ取得 |
 | `is_make_debut()` | なし | `bool` | 新馬戦かどうか |

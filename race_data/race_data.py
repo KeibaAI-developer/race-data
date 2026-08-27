@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 from keiba_data_interface import DataInterface
+from keiba_data_interface.exceptions import UnsupportedOperationError
 from keiba_data_interface.schema import RACE_BASIC_INFO_COLUMNS
 from keiba_domain import (
     CENTRAL_KEIBAJO_CODES,
@@ -144,7 +145,7 @@ class RaceData:
 
         Raises:
             RuntimeError: fetch_past_performances が未実行の場合
-            DataNotFoundError: プロバイダーが一括取得に対応していない場合（scraping）
+            UnsupportedOperationError: プロバイダーが一括取得に対応していない場合（scraping）
         """
         self._past_race_basic_info_df = self._build_past_race_basic_info_df()
 
@@ -170,8 +171,10 @@ class RaceData:
         if self.data_interface.supports_votes:
             self.fetch_votes()
         self.fetch_past_performances()
-        if self.data_interface.supports_bulk:
+        try:
             self.fetch_past_race_basic_info()
+        except UnsupportedOperationError:
+            pass
         self.fetch_horse_master()
 
     @property
