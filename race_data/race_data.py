@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 from keiba_data_interface import DataInterface
+from keiba_data_interface.exceptions import UnsupportedOperationError
 from keiba_data_interface.schema import RACE_BASIC_INFO_COLUMNS
 from keiba_domain import (
     CENTRAL_KEIBAJO_CODES,
@@ -129,7 +130,7 @@ class RaceData:
 
         Raises:
             RuntimeError: fetch_past_performances が未実行の場合
-            DataNotFoundError: プロバイダーが一括取得に対応していない場合（scraping）
+            UnsupportedOperationError: プロバイダーが一括取得に対応していない場合（scraping）
         """
         self._past_race_basic_info_df = self._build_past_race_basic_info_df()
 
@@ -140,9 +141,9 @@ class RaceData:
     def fetch_all(self) -> None:
         """遅延取得対象をすべて取得する.
 
-        過去走のレース基本情報（fetch_past_race_basic_info）は一括取得に対応した
-        プロバイダー（data_interface.supports_bulk が真）でのみ取得する。対応していない
-        プロバイダーでは取得せず、past_race_basic_info_df の参照時に RuntimeError になる。
+        プロバイダーが対応していない操作（UnsupportedOperationError。scraping の
+        過去走のレース基本情報の一括取得）は取得せず、該当属性の参照時に RuntimeError になる。
+        データが存在しない場合（DataNotFoundError）はそのまま伝播する。
         """
         if not self.future_race:
             self.fetch_result()
@@ -152,8 +153,10 @@ class RaceData:
             self._payoff_df = pd.DataFrame()
         self.fetch_odds()
         self.fetch_past_performances()
-        if self.data_interface.supports_bulk:
+        try:
             self.fetch_past_race_basic_info()
+        except UnsupportedOperationError:
+            pass
         self.fetch_horse_master()
 
     @property

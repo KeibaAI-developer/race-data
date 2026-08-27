@@ -2,6 +2,7 @@
 
 import pandas as pd
 import pytest
+from keiba_data_interface.exceptions import DataNotFoundError, UnsupportedOperationError
 from keiba_data_interface.schema import RACE_BASIC_INFO_COLUMNS
 
 from race_data.race_data import RaceData
@@ -101,16 +102,25 @@ def test_fetch_all_fetches_past_race_basic_info_when_bulk_supported(
 
 
 def test_fetch_all_skips_past_race_basic_info_when_bulk_not_supported() -> None:
-    """一括取得に対応しないプロバイダーでは fetch_all は取得せず、参照時に RuntimeError になる."""
+    """一括取得に対応しないプロバイダーでは fetch_all は取得を省き、参照時に RuntimeError になる."""
     mock_di = make_mock_di()
-    mock_di.supports_bulk = False
+    mock_di.get_race_basic_info_bulk.side_effect = UnsupportedOperationError("非対応")
     race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
 
     race_data.fetch_all()
 
-    mock_di.get_race_basic_info_bulk.assert_not_called()
     with pytest.raises(RuntimeError, match="Call fetch_past_race_basic_info"):
         _ = race_data.past_race_basic_info_df
+
+
+def test_fetch_all_propagates_data_not_found() -> None:
+    """一括取得でデータが無い（DataNotFoundError）場合は fetch_all がそのまま伝播させる."""
+    mock_di = make_mock_di()
+    mock_di.get_race_basic_info_bulk.side_effect = DataNotFoundError("データなし")
+    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
+
+    with pytest.raises(DataNotFoundError):
+        race_data.fetch_all()
 
 
 # 準正常系
