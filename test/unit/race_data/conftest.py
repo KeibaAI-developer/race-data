@@ -175,6 +175,23 @@ def make_mock_di(
         return {horse_id: mock.get_horse_master.return_value.copy() for horse_id in horse_ids}
 
     mock.get_horse_master_bulk.side_effect = get_horse_master_bulk
+    mock.supports_bulk = True
+
+    def get_race_basic_info_bulk(race_codes: list[str]) -> pd.DataFrame:
+        """指定レースコードのレース基本情報（1行ずつ）を返す.
+
+        一括取得は実在したレースだけを返す契約のため、レースコード降順で返して
+        呼び出し側の並べ替えを検証できるようにする。
+
+        Args:
+            race_codes (list[str]): レースコードのリスト
+
+        Returns:
+            pd.DataFrame: レースコードを持つレース基本情報
+        """
+        return pd.DataFrame({"レースコード": sorted(race_codes, reverse=True)})
+
+    mock.get_race_basic_info_bulk.side_effect = get_race_basic_info_bulk
     return mock
 
 

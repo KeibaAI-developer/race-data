@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 from keiba_data_interface import DataInterface
+from keiba_data_interface.schema import RACE_BASIC_INFO_COLUMNS
 from keiba_domain import (
     CENTRAL_KEIBAJO_CODES,
     Baba,
@@ -39,6 +40,8 @@ class RaceData:
         win_show_odds_df (pd.DataFrame): 単複オッズ情報。fetch_odds 後に参照可能
         past_performances_dict (dict[int, pd.DataFrame]): 各馬の過去成績辞書。
             fetch_past_performances 後に参照可能
+        past_race_basic_info_df (pd.DataFrame): 全出走馬の過去走のレース基本情報。
+            fetch_past_race_basic_info 後に参照可能
         horse_master_dict (dict[str, pd.DataFrame]): 各馬のマスタ情報辞書。
             fetch_horse_master 後に参照可能
         num_runners (int): 出走頭数（競走除外などは除く）
@@ -58,6 +61,7 @@ class RaceData:
     _payoff_df: pd.DataFrame | None = field(init=False, default=None)
     _win_show_odds_df: pd.DataFrame | None = field(init=False, default=None)
     _past_performances_dict: dict[int, pd.DataFrame] | None = field(init=False, default=None)
+    _past_race_basic_info_df: pd.DataFrame | None = field(init=False, default=None)
     _horse_master_dict: dict[str, pd.DataFrame] | None = field(init=False, default=None)
 
     def __post_init__(self) -> None:
@@ -106,15 +110,40 @@ class RaceData:
             self.num_runners = int(self._win_show_odds_df["単勝人気"].notna().sum())
 
     def fetch_past_performances(self) -> None:
-        """各馬の過去成績辞書を取得する."""
+        """各馬の過去成績辞書を取得する.
+
+        過去走のレース基本情報（past_race_basic_info_df）は過去成績から組み立てるため、
+        再取得時は未取得状態へ戻す。古い過去成績に基づく値が残らないようにする。
+        """
         self._past_performances_dict = self._build_past_performances_dict()
+        self._past_race_basic_info_df = None
+
+    def fetch_past_race_basic_info(self) -> None:
+        """全出走馬の過去走のレース基本情報を一括取得する.
+
+        valid_horse_num の各馬の過去成績（get_filtered_past_performances）からレースコードを
+        重複なく集め、DataInterface.get_race_basic_info_bulk を1回だけ呼ぶ。
+        fetch_past_performances() の実行後に呼ぶこと。
+
+        複数の特徴量ライブラリが同じ取得を必要とするため、RaceData が1回だけ取得して保持する。
+
+        Raises:
+            RuntimeError: fetch_past_performances が未実行の場合
+            DataNotFoundError: プロバイダーが一括取得に対応していない場合（scraping）
+        """
+        self._past_race_basic_info_df = self._build_past_race_basic_info_df()
 
     def fetch_horse_master(self) -> None:
         """各馬のマスタ情報辞書を取得する."""
         self._horse_master_dict = self._build_horse_master_dict()
 
     def fetch_all(self) -> None:
-        """遅延取得対象をすべて取得する."""
+        """遅延取得対象をすべて取得する.
+
+        過去走のレース基本情報（fetch_past_race_basic_info）は一括取得に対応した
+        プロバイダー（data_interface.supports_bulk が真）でのみ取得する。対応していない
+        プロバイダーでは取得せず、past_race_basic_info_df の参照時に RuntimeError になる。
+        """
         if not self.future_race:
             self.fetch_result()
         else:
@@ -123,6 +152,8 @@ class RaceData:
             self._payoff_df = pd.DataFrame()
         self.fetch_odds()
         self.fetch_past_performances()
+        if self.data_interface.supports_bulk:
+            self.fetch_past_race_basic_info()
         self.fetch_horse_master()
 
     @property
@@ -188,6 +219,22 @@ class RaceData:
                 "past_performances_dict is not fetched. Call fetch_past_performances() first."
             )
         return self._past_performances_dict
+
+    @property
+    def past_race_basic_info_df(self) -> pd.DataFrame:
+        """全出走馬の過去走のレース基本情報を返す.
+
+        RACE_BASIC_INFO_COLUMNS のカラムを持ち、レースコード昇順。存在しないレース
+        （一括取得で返らなかったレースコード）の行は含めない。
+
+        Raises:
+            RuntimeError: fetch_past_race_basic_info が未実行の場合
+        """
+        if self._past_race_basic_info_df is None:
+            raise RuntimeError(
+                "past_race_basic_info_df is not fetched. Call fetch_past_race_basic_info() first."
+            )
+        return self._past_race_basic_info_df
 
     @property
     def horse_master_dict(self) -> dict[str, pd.DataFrame]:
@@ -327,6 +374,26 @@ class RaceData:
             pd.DataFrame: 今レースより前のレースだけを残した過去成績
         """
         return pp_df[pp_df["レースコード"] < self.race_code].reset_index(drop=True)
+
+    def _build_past_race_basic_info_df(self) -> pd.DataFrame:
+        """全出走馬の過去走のレース基本情報を組み立てる.
+
+        Returns:
+            pd.DataFrame: 過去走のレース基本情報（RACE_BASIC_INFO_COLUMNS、レースコード昇順）。
+                過去走が1件も無ければ0行
+        """
+        race_codes: list[str] = []
+        seen: set[str] = set()
+        for uma_ban in self.valid_horse_num:
+            for race_code in self.get_filtered_past_performances(uma_ban)["レースコード"]:
+                code = str(race_code)
+                if code not in seen:
+                    seen.add(code)
+                    race_codes.append(code)
+        if not race_codes:
+            return pd.DataFrame(columns=RACE_BASIC_INFO_COLUMNS)
+        df = self.data_interface.get_race_basic_info_bulk(race_codes)
+        return df.sort_values("レースコード").reset_index(drop=True)
 
     def _build_horse_master_dict(self) -> dict[str, pd.DataFrame]:
         """entry_df の各馬のマスタ情報辞書を構築する.
