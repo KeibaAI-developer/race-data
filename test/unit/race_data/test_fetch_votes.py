@@ -1,6 +1,7 @@
 """RaceData.fetch_votes のテスト."""
 
 import pytest
+from keiba_data_interface.exceptions import DataNotFoundError, UnsupportedOperationError
 
 from race_data.race_data import RaceData
 
@@ -28,14 +29,23 @@ def test_fetch_all_fetches_votes_when_supported(past_race_data: RaceData) -> Non
 
 
 def test_fetch_all_skips_votes_when_not_supported(past_race_data: RaceData) -> None:
-    """票数に対応していないプロバイダーでは fetch_all が票数を取得せず、参照時に RuntimeError."""
-    past_race_data.data_interface.supports_votes = False
+    """票数に対応しないプロバイダー（UnsupportedOperationError）では fetch_all が取得を省く."""
+    past_race_data.data_interface.get_win_show_votes.side_effect = UnsupportedOperationError(
+        "非対応"
+    )
 
     past_race_data.fetch_all()
 
-    past_race_data.data_interface.get_win_show_votes.assert_not_called()
     with pytest.raises(RuntimeError, match="Call fetch_votes"):
         _ = past_race_data.win_show_votes_df
+
+
+def test_fetch_all_propagates_data_not_found_for_votes(past_race_data: RaceData) -> None:
+    """票数のデータが無い（DataNotFoundError）場合は fetch_all がそのまま伝播させる."""
+    past_race_data.data_interface.get_win_show_votes.side_effect = DataNotFoundError("データなし")
+
+    with pytest.raises(DataNotFoundError):
+        past_race_data.fetch_all()
 
 
 # 準正常系

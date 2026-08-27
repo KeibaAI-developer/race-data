@@ -116,12 +116,11 @@ class RaceData:
     def fetch_votes(self) -> None:
         """単勝・複勝の票数を取得する.
 
-        複勝支持率を票数から求めるために使う。票数に対応していないプロバイダー
-        （data_interface.supports_votes が偽。scraping）では DataNotFoundError になる。
+        複勝支持率を票数から求めるために使う。
 
         Raises:
-            DataNotFoundError: 該当レースの票数が存在しない、または票数に対応していない
-                プロバイダーの場合
+            DataNotFoundError: 該当レースの票数が存在しない場合
+            UnsupportedOperationError: 票数に対応していないプロバイダー（scraping）の場合
         """
         self._win_show_votes_df = self.data_interface.get_win_show_votes(self.race_code)
 
@@ -156,10 +155,9 @@ class RaceData:
     def fetch_all(self) -> None:
         """遅延取得対象をすべて取得する.
 
-        過去走のレース基本情報（fetch_past_race_basic_info）は一括取得に対応した
-        プロバイダー（data_interface.supports_bulk が真）でのみ、単複票数（fetch_votes）は
-        票数に対応したプロバイダー（data_interface.supports_votes が真）でのみ取得する。
-        対応していないプロバイダーでは取得せず、該当属性の参照時に RuntimeError になる。
+        プロバイダーが対応していない操作（UnsupportedOperationError。scraping の単複票数と
+        過去走のレース基本情報の一括取得）は取得せず、該当属性の参照時に RuntimeError になる。
+        データが存在しない場合（DataNotFoundError）はそのまま伝播する。
         """
         if not self.future_race:
             self.fetch_result()
@@ -168,8 +166,10 @@ class RaceData:
             self._race_result_info_df = pd.DataFrame()
             self._payoff_df = pd.DataFrame()
         self.fetch_odds()
-        if self.data_interface.supports_votes:
+        try:
             self.fetch_votes()
+        except UnsupportedOperationError:
+            pass
         self.fetch_past_performances()
         try:
             self.fetch_past_race_basic_info()

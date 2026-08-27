@@ -84,7 +84,7 @@ except RuntimeError as exc:
 
 rd.fetch_result()             # result_df / race_result_info_df / payoff_df を取得
 rd.fetch_odds()                # win_show_odds_df を取得
-rd.fetch_votes()               # win_show_votes_df を取得（票数に対応したプロバイダー。mykeibadb）
+rd.fetch_votes()               # win_show_votes_df を取得（mykeibadb のみ）
 rd.fetch_past_performances()   # past_performances_dict を取得
 rd.fetch_past_race_basic_info() # past_race_basic_info_df を取得（fetch_past_performances の後）
 rd.fetch_horse_master()        # horse_master_dict を取得
@@ -94,7 +94,7 @@ print(rd.win_show_odds_df)
 ```
 
 すべての遅延データをまとめて取得するには `fetch_all()` を使用します。未来レースでは結果系（`result_df` / `race_result_info_df` / `payoff_df`）は取得されず空の `DataFrame` になります。
-`past_race_basic_info_df` は一括取得に対応したプロバイダー（`data_interface.supports_bulk` が真。mykeibadb）でのみ、`win_show_votes_df` は票数に対応したプロバイダー（`data_interface.supports_votes` が真。mykeibadb）でのみ `fetch_all()` で取得されます。
+`win_show_votes_df` と `past_race_basic_info_df` は対応したプロバイダー（mykeibadb）でのみ `fetch_all()` で取得されます。対応していないプロバイダー（scraping。`UnsupportedOperationError`）では取得せず、参照時に `RuntimeError` になります。
 
 ### 過去走のレース基本情報
 
@@ -215,11 +215,11 @@ race_data_list = [
 | `fetch_payoff()` | なし | `None` | `payoff_df` を取得 |
 | `fetch_result()` | なし | `None` | `result_df` / `race_result_info_df` / `payoff_df` をまとめて取得 |
 | `fetch_odds()` | なし | `None` | `win_show_odds_df` を取得（再取得も可）。出走頭数欠損時は `num_runners` を補完 |
-| `fetch_votes()` | なし | `None` | `win_show_votes_df` を取得。票数に対応していないプロバイダー（scraping）は `DataNotFoundError` |
+| `fetch_votes()` | なし | `None` | `win_show_votes_df` を取得。票数に対応していないプロバイダー（scraping）は `UnsupportedOperationError` |
 | `fetch_past_performances()` | なし | `None` | `past_performances_dict` を取得 |
 | `fetch_past_race_basic_info()` | なし | `None` | `past_race_basic_info_df` を取得（`fetch_past_performances()` の後に呼ぶ。scraping プロバイダーは `UnsupportedOperationError`） |
 | `fetch_horse_master()` | なし | `None` | `horse_master_dict` を取得 |
-| `fetch_all()` | なし | `None` | 上記すべてを取得。`win_show_votes_df` は `supports_votes` が真のプロバイダーでのみ取得する。未来レースでは結果系は空 `DataFrame` になる。`past_race_basic_info_df` は `supports_bulk` が真のプロバイダーでのみ取得 |
+| `fetch_all()` | なし | `None` | 上記すべてを取得。未来レースでは結果系は空 `DataFrame` になる。プロバイダーが対応していない操作（`UnsupportedOperationError`）は取得を省く |
 | `is_make_debut()` | なし | `bool` | 新馬戦かどうか |
 | `is_steeple_chase()` | なし | `bool` | 障害レースかどうか |
 | `is_straight_race()` | なし | `bool` | 直線コースかどうか |
