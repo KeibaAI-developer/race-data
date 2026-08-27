@@ -176,6 +176,7 @@ def make_mock_di(
 
     mock.get_horse_master_bulk.side_effect = get_horse_master_bulk
     mock.supports_bulk = True
+    mock.supports_votes = True
 
     def get_race_basic_info_bulk(race_codes: list[str]) -> pd.DataFrame:
         """指定レースコードのレース基本情報（1行ずつ）を返す.

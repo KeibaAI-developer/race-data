@@ -39,6 +39,7 @@ class RaceData:
         payoff_df (pd.DataFrame): 払戻情報。fetch_payoff または fetch_result 後に参照可能
         win_show_odds_df (pd.DataFrame): 単複オッズ情報。fetch_odds 後に参照可能
         win_show_votes_df (pd.DataFrame): 単複票数情報。fetch_votes 後に参照可能
+            （fetch_all は票数に対応したプロバイダーでのみ取得する）
         past_performances_dict (dict[int, pd.DataFrame]): 各馬の過去成績辞書。
             fetch_past_performances 後に参照可能
         past_race_basic_info_df (pd.DataFrame): 全出走馬の過去走のレース基本情報。
@@ -114,11 +115,12 @@ class RaceData:
     def fetch_votes(self) -> None:
         """単勝・複勝の票数を取得する.
 
-        複勝支持率を票数から求めるために使う。fetch_all には含めない。票数は予測時に
-        明示的に取るデータであり、scraping プロバイダーでは取得できない（DataNotFoundError）ため。
+        複勝支持率を票数から求めるために使う。票数に対応していないプロバイダー
+        （data_interface.supports_votes が偽。scraping）では DataNotFoundError になる。
 
         Raises:
-            DataNotFoundError: 該当レースの票数が存在しない、または scraping プロバイダーの場合
+            DataNotFoundError: 該当レースの票数が存在しない、または票数に対応していない
+                プロバイダーの場合
         """
         self._win_show_votes_df = self.data_interface.get_win_show_votes(self.race_code)
 
@@ -154,8 +156,9 @@ class RaceData:
         """遅延取得対象をすべて取得する.
 
         過去走のレース基本情報（fetch_past_race_basic_info）は一括取得に対応した
-        プロバイダー（data_interface.supports_bulk が真）でのみ取得する。対応していない
-        プロバイダーでは取得せず、past_race_basic_info_df の参照時に RuntimeError になる。
+        プロバイダー（data_interface.supports_bulk が真）でのみ、単複票数（fetch_votes）は
+        票数に対応したプロバイダー（data_interface.supports_votes が真）でのみ取得する。
+        対応していないプロバイダーでは取得せず、該当属性の参照時に RuntimeError になる。
         """
         if not self.future_race:
             self.fetch_result()
@@ -164,6 +167,8 @@ class RaceData:
             self._race_result_info_df = pd.DataFrame()
             self._payoff_df = pd.DataFrame()
         self.fetch_odds()
+        if self.data_interface.supports_votes:
+            self.fetch_votes()
         self.fetch_past_performances()
         if self.data_interface.supports_bulk:
             self.fetch_past_race_basic_info()
