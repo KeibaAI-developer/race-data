@@ -192,6 +192,9 @@ def make_mock_di(
         return pd.DataFrame({"レースコード": sorted(race_codes, reverse=True)})
 
     mock.get_race_basic_info_bulk.side_effect = get_race_basic_info_bulk
+    mock.get_win_show_votes.return_value = pd.DataFrame(
+        {"馬番": [1, 2, 3], "複勝票数": [300, 200, 100], "複勝票数合計": [700, 700, 700]}
+    )
     return mock
 
 

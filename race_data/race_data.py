@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 
 import pandas as pd
 from keiba_data_interface import DataInterface
+from keiba_data_interface.exceptions import UnsupportedOperationError
 from keiba_data_interface.schema import RACE_BASIC_INFO_COLUMNS
 from keiba_domain import (
     CENTRAL_KEIBAJO_CODES,
@@ -38,6 +39,8 @@ class RaceData:
             fetch_race_result_info または fetch_result 後に参照可能
         payoff_df (pd.DataFrame): 払戻情報。fetch_payoff または fetch_result 後に参照可能
         win_show_odds_df (pd.DataFrame): 単複オッズ情報。fetch_odds 後に参照可能
+        win_show_votes_df (pd.DataFrame): 単複票数情報。fetch_votes 後に参照可能
+            （fetch_all は票数に対応したプロバイダーでのみ取得する）
         past_performances_dict (dict[int, pd.DataFrame]): 各馬の過去成績辞書。
             fetch_past_performances 後に参照可能
         past_race_basic_info_df (pd.DataFrame): 全出走馬の過去走のレース基本情報。
@@ -60,6 +63,7 @@ class RaceData:
     _race_result_info_df: pd.DataFrame | None = field(init=False, default=None)
     _payoff_df: pd.DataFrame | None = field(init=False, default=None)
     _win_show_odds_df: pd.DataFrame | None = field(init=False, default=None)
+    _win_show_votes_df: pd.DataFrame | None = field(init=False, default=None)
     _past_performances_dict: dict[int, pd.DataFrame] | None = field(init=False, default=None)
     _past_race_basic_info_df: pd.DataFrame | None = field(init=False, default=None)
     _horse_master_dict: dict[str, pd.DataFrame] | None = field(init=False, default=None)
@@ -109,6 +113,17 @@ class RaceData:
         if pd.isna(self.race_basic_info_df["出走頭数"].iloc[0]):
             self.num_runners = int(self._win_show_odds_df["単勝人気"].notna().sum())
 
+    def fetch_votes(self) -> None:
+        """単勝・複勝の票数を取得する.
+
+        複勝支持率を票数から求めるために使う。
+
+        Raises:
+            DataNotFoundError: 該当レースの票数が存在しない場合
+            UnsupportedOperationError: 票数に対応していないプロバイダー（scraping）の場合
+        """
+        self._win_show_votes_df = self.data_interface.get_win_show_votes(self.race_code)
+
     def fetch_past_performances(self) -> None:
         """各馬の過去成績辞書を取得する.
 
@@ -129,7 +144,7 @@ class RaceData:
 
         Raises:
             RuntimeError: fetch_past_performances が未実行の場合
-            DataNotFoundError: プロバイダーが一括取得に対応していない場合（scraping）
+            UnsupportedOperationError: プロバイダーが一括取得に対応していない場合（scraping）
         """
         self._past_race_basic_info_df = self._build_past_race_basic_info_df()
 
@@ -140,9 +155,9 @@ class RaceData:
     def fetch_all(self) -> None:
         """遅延取得対象をすべて取得する.
 
-        過去走のレース基本情報（fetch_past_race_basic_info）は一括取得に対応した
-        プロバイダー（data_interface.supports_bulk が真）でのみ取得する。対応していない
-        プロバイダーでは取得せず、past_race_basic_info_df の参照時に RuntimeError になる。
+        プロバイダーが対応していない操作（UnsupportedOperationError。scraping の単複票数と
+        過去走のレース基本情報の一括取得）は取得せず、該当属性の参照時に RuntimeError になる。
+        データが存在しない場合（DataNotFoundError）はそのまま伝播する。
         """
         if not self.future_race:
             self.fetch_result()
@@ -151,9 +166,15 @@ class RaceData:
             self._race_result_info_df = pd.DataFrame()
             self._payoff_df = pd.DataFrame()
         self.fetch_odds()
+        try:
+            self.fetch_votes()
+        except UnsupportedOperationError:
+            pass
         self.fetch_past_performances()
-        if self.data_interface.supports_bulk:
+        try:
             self.fetch_past_race_basic_info()
+        except UnsupportedOperationError:
+            pass
         self.fetch_horse_master()
 
     @property
@@ -206,6 +227,17 @@ class RaceData:
         if self._win_show_odds_df is None:
             raise RuntimeError("win_show_odds_df is not fetched. Call fetch_odds() first.")
         return self._win_show_odds_df
+
+    @property
+    def win_show_votes_df(self) -> pd.DataFrame:
+        """単複票数情報を返す.
+
+        Raises:
+            RuntimeError: fetch_votes が未実行の場合
+        """
+        if self._win_show_votes_df is None:
+            raise RuntimeError("win_show_votes_df is not fetched. Call fetch_votes() first.")
+        return self._win_show_votes_df
 
     @property
     def past_performances_dict(self) -> dict[int, pd.DataFrame]:

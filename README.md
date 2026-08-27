@@ -72,7 +72,7 @@ print(rd.is_good_to_firm())  # True（良馬場）
 
 ### 遅延データを取得する
 
-`result_df` / `race_result_info_df` / `payoff_df` / `win_show_odds_df` / `past_performances_dict` / `past_race_basic_info_df` / `horse_master_dict` は初期化時には取得されません。各 `fetch_*()` を呼び出した後にのみ参照できます。未取得の状態でアクセスすると `RuntimeError` が発生します。
+`result_df` / `race_result_info_df` / `payoff_df` / `win_show_odds_df` / `win_show_votes_df` / `past_performances_dict` / `past_race_basic_info_df` / `horse_master_dict` は初期化時には取得されません。各 `fetch_*()` を呼び出した後にのみ参照できます。未取得の状態でアクセスすると `RuntimeError` が発生します。
 
 ```python
 rd = RaceData(race_code=race_code, data_interface=di)
@@ -84,6 +84,7 @@ except RuntimeError as exc:
 
 rd.fetch_result()             # result_df / race_result_info_df / payoff_df を取得
 rd.fetch_odds()                # win_show_odds_df を取得
+rd.fetch_votes()               # win_show_votes_df を取得（mykeibadb のみ）
 rd.fetch_past_performances()   # past_performances_dict を取得
 rd.fetch_past_race_basic_info() # past_race_basic_info_df を取得（fetch_past_performances の後）
 rd.fetch_horse_master()        # horse_master_dict を取得
@@ -93,7 +94,7 @@ print(rd.win_show_odds_df)
 ```
 
 すべての遅延データをまとめて取得するには `fetch_all()` を使用します。未来レースでは結果系（`result_df` / `race_result_info_df` / `payoff_df`）は取得されず空の `DataFrame` になります。
-`past_race_basic_info_df` は一括取得に対応したプロバイダー（`data_interface.supports_bulk` が真。mykeibadb）でのみ `fetch_all()` で取得されます。
+`win_show_votes_df` と `past_race_basic_info_df` は対応したプロバイダー（mykeibadb）でのみ `fetch_all()` で取得されます。対応していないプロバイダー（scraping。`UnsupportedOperationError`）では取得せず、参照時に `RuntimeError` になります。
 
 ### 過去走のレース基本情報
 
@@ -197,6 +198,7 @@ race_data_list = [
 | `race_result_info_df` | `pd.DataFrame` | ラップタイム・コーナー通過順。`fetch_race_result_info()` または `fetch_result()` 後に参照可能（未取得時は `RuntimeError`）。未来レースでは `fetch_all()` 後に空 |
 | `payoff_df` | `pd.DataFrame` | 払戻情報。`fetch_payoff()` または `fetch_result()` 後に参照可能（未取得時は `RuntimeError`）。未来レースでは `fetch_all()` 後に空 |
 | `win_show_odds_df` | `pd.DataFrame` | 単複オッズ情報。`fetch_odds()` 後に参照可能（未取得時は `RuntimeError`） |
+| `win_show_votes_df` | `pd.DataFrame` | 単複票数情報（`WIN_SHOW_VOTES_COLUMNS`、馬番順）。`fetch_votes()` 後に参照可能（未取得時は `RuntimeError`） |
 | `past_performances_dict` | `dict[int, pd.DataFrame]` | 各馬の過去成績辞書（キー: 馬番。対象レース以前のデータのみ）。`fetch_past_performances()` 後に参照可能（未取得時は `RuntimeError`） |
 | `past_race_basic_info_df` | `pd.DataFrame` | 全出走馬の過去走のレース基本情報（`RACE_BASIC_INFO_COLUMNS`、レースコード昇順）。`fetch_past_race_basic_info()` 後に参照可能（未取得時は `RuntimeError`） |
 | `horse_master_dict` | `dict[str, pd.DataFrame]` | 各馬のマスタ情報辞書（キー: 血統登録番号）。`fetch_horse_master()` 後に参照可能（未取得時は `RuntimeError`） |
@@ -213,10 +215,11 @@ race_data_list = [
 | `fetch_payoff()` | なし | `None` | `payoff_df` を取得 |
 | `fetch_result()` | なし | `None` | `result_df` / `race_result_info_df` / `payoff_df` をまとめて取得 |
 | `fetch_odds()` | なし | `None` | `win_show_odds_df` を取得（再取得も可）。出走頭数欠損時は `num_runners` を補完 |
+| `fetch_votes()` | なし | `None` | `win_show_votes_df` を取得。票数に対応していないプロバイダー（scraping）は `UnsupportedOperationError` |
 | `fetch_past_performances()` | なし | `None` | `past_performances_dict` を取得 |
-| `fetch_past_race_basic_info()` | なし | `None` | `past_race_basic_info_df` を取得（`fetch_past_performances()` の後に呼ぶ。scraping プロバイダーは `DataNotFoundError`） |
+| `fetch_past_race_basic_info()` | なし | `None` | `past_race_basic_info_df` を取得（`fetch_past_performances()` の後に呼ぶ。scraping プロバイダーは `UnsupportedOperationError`） |
 | `fetch_horse_master()` | なし | `None` | `horse_master_dict` を取得 |
-| `fetch_all()` | なし | `None` | 上記すべてを取得。未来レースでは結果系は空 `DataFrame` になる。`past_race_basic_info_df` は `supports_bulk` が真のプロバイダーでのみ取得 |
+| `fetch_all()` | なし | `None` | 上記すべてを取得。未来レースでは結果系は空 `DataFrame` になる。プロバイダーが対応していない操作（`UnsupportedOperationError`）は取得を省く |
 | `is_make_debut()` | なし | `bool` | 新馬戦かどうか |
 | `is_steeple_chase()` | なし | `bool` | 障害レースかどうか |
 | `is_straight_race()` | なし | `bool` | 直線コースかどうか |
