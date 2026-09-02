@@ -26,6 +26,7 @@ class RaceData:
     対象レースの情報（レース基本情報・出馬表・オッズ・票数・結果系）は data_interface から、
     過去成績・過去走のレース基本情報・競走馬マスタ・着度数は history_interface から取得する。
     history_interface を省略すると data_interface を両方に使う。
+    history_interface と baba_code はキーワード専用引数で、位置引数での取り違えを防ぐ。
 
     Attributes:
         race_code (str): 16桁レースコード（年(4)+月日(4)+競馬場(2)+回(2)+日目(2)+R(2)）
@@ -60,6 +61,7 @@ class RaceData:
         self,
         race_code: str,
         data_interface: DataInterface,
+        *,
         history_interface: DataInterface | None = None,
         baba_code: str = "",
     ) -> None:
