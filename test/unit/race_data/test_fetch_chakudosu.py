@@ -22,9 +22,7 @@ def test_fetch_all_fetches_chakudosu_when_supported(past_race_data: RaceData) ->
     """着度数に対応したプロバイダーでは fetch_all が着度数も取得する."""
     past_race_data.fetch_all()
 
-    past_race_data.history_interface.get_chakudosu.assert_called_once_with(
-        past_race_data.race_code
-    )
+    past_race_data.history_interface.get_chakudosu.assert_called_once_with(past_race_data.race_code)
     assert past_race_data.chakudosu_df["馬番"].tolist() == [1, 2, 3]
 
 
