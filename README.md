@@ -2,13 +2,14 @@
 
 ## 概要
 
-`race-data` は、競馬レースの情報を一括で保持するデータクラス `RaceData` を提供する Python ライブラリです。
+`race-data` は、競馬レースの情報を一括で保持するクラス `RaceData` を提供する Python ライブラリです。
 
-`keiba-data-interface` の `DataInterface` を通じてレース基本情報・出馬表・レース結果・払戻情報・各馬の過去成績を取得し、1つのインスタンスにまとめて保持します。
+`keiba-data-interface` の `DataInterface` を通じてレース基本情報・出馬表・レース結果・払戻情報・各馬の過去成績・着度数を取得し、1つのインスタンスにまとめて保持します。
 
 - **未来のレース**（予測対象）と**過去のレース**（学習データ取得）の両方に対応
 - レースコードの日付から未来/過去を自動判定（同日は未来扱い）
-- 初期化時は確定データ（レース基本情報・出馬表）のみ取得し、結果・オッズ・過去成績・馬マスタは `fetch_*()` で明示的に取得する遅延取得設計
+- 初期化時は確定データ（レース基本情報・出馬表）のみ取得し、結果・オッズ・過去成績・馬マスタ・着度数は `fetch_*()` で明示的に取得する遅延取得設計
+- 対象レースの情報（最新情報用）と過去情報（アーカイブ用）で `DataInterface` を分けられる
 - 馬場状態・レース種別・コース形状の判定メソッドを提供
 - 過去成績の機械学習向けフィルタリングをサポート
 
@@ -72,7 +73,7 @@ print(rd.is_good_to_firm())  # True（良馬場）
 
 ### 遅延データを取得する
 
-`result_df` / `race_result_info_df` / `payoff_df` / `win_show_odds_df` / `win_show_votes_df` / `past_performances_dict` / `past_race_basic_info_df` / `horse_master_dict` は初期化時には取得されません。各 `fetch_*()` を呼び出した後にのみ参照できます。未取得の状態でアクセスすると `RuntimeError` が発生します。
+`result_df` / `race_result_info_df` / `payoff_df` / `win_show_odds_df` / `win_show_votes_df` / `past_performances_dict` / `past_race_basic_info_df` / `horse_master_dict` / `chakudosu_df` は初期化時には取得されません。各 `fetch_*()` を呼び出した後にのみ参照できます。未取得の状態でアクセスすると `RuntimeError` が発生します。
 
 ```python
 rd = RaceData(race_code=race_code, data_interface=di)
@@ -88,13 +89,14 @@ rd.fetch_votes()               # win_show_votes_df を取得（mykeibadb のみ�
 rd.fetch_past_performances()   # past_performances_dict を取得
 rd.fetch_past_race_basic_info() # past_race_basic_info_df を取得（fetch_past_performances の後）
 rd.fetch_horse_master()        # horse_master_dict を取得
+rd.fetch_chakudosu()           # chakudosu_df を取得（mykeibadb のみ）
 
 print(rd.result_df)
 print(rd.win_show_odds_df)
 ```
 
 すべての遅延データをまとめて取得するには `fetch_all()` を使用します。未来レースでは結果系（`result_df` / `race_result_info_df` / `payoff_df`）は取得されず空の `DataFrame` になります。
-`win_show_votes_df` と `past_race_basic_info_df` は対応したプロバイダー（mykeibadb）でのみ `fetch_all()` で取得されます。対応していないプロバイダー（scraping。`UnsupportedOperationError`）では取得せず、参照時に `RuntimeError` になります。
+`win_show_votes_df` / `past_race_basic_info_df` / `chakudosu_df` は対応したプロバイダー（mykeibadb）でのみ `fetch_all()` で取得されます。対応していないプロバイダー（scraping。`UnsupportedOperationError`）では取得せず、参照時に `RuntimeError` になります。
 
 ### 過去走のレース基本情報
 
@@ -171,6 +173,25 @@ rd.fetch_odds()
 print(rd.win_show_odds_df)
 ```
 
+### 最新情報用とアーカイブ用で DataInterface を分ける
+
+レース直前の予測では、出馬表・オッズ・馬場など当日に変わる情報は最新の取得元（scraping）から取り、過去成績・競走馬マスタ・着度数など取り込み済みの情報は DB（mykeibadb）から取りたい場合があります。`history_interface` にアーカイブ用の `DataInterface` を渡すと、取得内容に応じて呼び分けます。省略時は `data_interface` を両方に使います。
+
+| 取得内容 | 使う `DataInterface` |
+|---|---|
+| レース基本情報・出馬表（初期化時）、結果系（`fetch_result` ほか）、単複オッズ、単複票数 | `data_interface` |
+| 過去成績、過去走のレース基本情報、競走馬マスタ、着度数 | `history_interface` |
+
+```python
+live = DataInterface("scraping")
+history = DataInterface("mykeibadb")
+rd = RaceData(race_code=race_code, data_interface=live, history_interface=history)
+
+rd.fetch_odds()               # scraping から取得
+rd.fetch_past_performances()  # mykeibadb から取得
+rd.fetch_chakudosu()          # mykeibadb から取得
+```
+
 ### 複数レースで DataInterface を共有する
 
 `DataInterface` はコンストラクタ引数として受け取るため、複数の `RaceData` インスタンスで共有できます。
@@ -190,6 +211,8 @@ race_data_list = [
 | 属性名 | 型 | 説明 |
 |---|---|---|
 | `race_code` | `str` | 16桁レースコード（年(4)+月日(4)+競馬場(2)+回(2)+日目(2)+R(2)） |
+| `data_interface` | `DataInterface` | 対象レースの情報の取得先（最新情報用） |
+| `history_interface` | `DataInterface` | 過去情報の取得先（アーカイブ用）。省略時は `data_interface` |
 | `baba_code` | `str` | 馬場状態コード。`"1"`(良), `"2"`(稍), `"3"`(重), `"4"`(不)。省略時は自動設定 |
 | `future_race` | `bool` | 未来のレースかどうか（レース日 ≥ 実行日なら `True`） |
 | `race_basic_info_df` | `pd.DataFrame` | レース基本情報（1行） |
@@ -202,6 +225,7 @@ race_data_list = [
 | `past_performances_dict` | `dict[int, pd.DataFrame]` | 各馬の過去成績辞書（キー: 馬番。対象レース以前のデータのみ）。`fetch_past_performances()` 後に参照可能（未取得時は `RuntimeError`） |
 | `past_race_basic_info_df` | `pd.DataFrame` | 全出走馬の過去走のレース基本情報（`RACE_BASIC_INFO_COLUMNS`、レースコード昇順）。`fetch_past_race_basic_info()` 後に参照可能（未取得時は `RuntimeError`） |
 | `horse_master_dict` | `dict[str, pd.DataFrame]` | 各馬のマスタ情報辞書（キー: 血統登録番号）。`fetch_horse_master()` 後に参照可能（未取得時は `RuntimeError`） |
+| `chakudosu_df` | `pd.DataFrame` | 出走別着度数。`fetch_chakudosu()` 後に参照可能（未取得時は `RuntimeError`） |
 | `num_runners` | `int` | 出走頭数（競走除外などは除く）。`race_basic_info_df` の出走頭数が欠損している場合、初期化時は `0` となり `fetch_odds()` 後に単勝人気の件数から補完される |
 | `valid_horse_num` | `list[int]` | 出走予定の馬番リスト（異常区分コードが1,2,3の馬を除外）。昇順 |
 
@@ -217,8 +241,9 @@ race_data_list = [
 | `fetch_odds()` | なし | `None` | `win_show_odds_df` を取得（再取得も可）。出走頭数欠損時は `num_runners` を補完 |
 | `fetch_votes()` | なし | `None` | `win_show_votes_df` を取得。票数に対応していないプロバイダー（scraping）は `UnsupportedOperationError` |
 | `fetch_past_performances()` | なし | `None` | `past_performances_dict` を取得 |
-| `fetch_past_race_basic_info()` | なし | `None` | `past_race_basic_info_df` を取得（`fetch_past_performances()` の後に呼ぶ。scraping プロバイダーは `UnsupportedOperationError`） |
+| `fetch_past_race_basic_info()` | なし | `None` | `past_race_basic_info_df` を取得（`fetch_past_performances()` の後に呼ぶ。`history_interface` が scraping プロバイダーの場合は `UnsupportedOperationError`） |
 | `fetch_horse_master()` | なし | `None` | `horse_master_dict` を取得 |
+| `fetch_chakudosu()` | なし | `None` | `chakudosu_df` を取得。着度数に対応していないプロバイダー（scraping）は `UnsupportedOperationError` |
 | `fetch_all()` | なし | `None` | 上記すべてを取得。未来レースでは結果系は空 `DataFrame` になる。プロバイダーが対応していない操作（`UnsupportedOperationError`）は取得を省く |
 | `is_make_debut()` | なし | `bool` | 新馬戦かどうか |
 | `is_steeple_chase()` | なし | `bool` | 障害レースかどうか |

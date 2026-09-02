@@ -1,6 +1,8 @@
-"""RaceData.__post_init__ のテスト."""
+"""RaceData の初期化のテスト."""
 
 from unittest.mock import MagicMock
+
+import pytest
 
 from race_data.race_data import RaceData
 
@@ -53,6 +55,7 @@ def test_lazy_data_not_fetched_on_init(past_race_data: RaceData, mock_di_past: M
     mock_di_past.get_payoff.assert_not_called()
     mock_di_past.get_past_performances.assert_not_called()
     mock_di_past.get_horse_master.assert_not_called()
+    mock_di_past.get_chakudosu.assert_not_called()
 
 
 def test_num_runners_from_race_basic_info(past_race_data: RaceData) -> None:
@@ -134,3 +137,13 @@ def test_valid_horse_num_empty_when_all_excluded() -> None:
     mock_di = make_mock_di(entry_df=entry_df)
     race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
     assert race_data.valid_horse_num == []
+
+
+# 準正常系
+
+
+def test_init_rejects_positional_optional_arguments() -> None:
+    """history_interface と baba_code は位置引数で渡せない."""
+    mock_di = make_mock_di()
+    with pytest.raises(TypeError):
+        RaceData(PAST_RACE_CODE, mock_di, "3")  # type: ignore[misc]

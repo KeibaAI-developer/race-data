@@ -15,6 +15,7 @@ def test_fetch_all_fetches_all_lazy_data_for_past_race(past_race_data: RaceData)
     assert not past_race_data.win_show_odds_df.empty
     assert past_race_data.past_performances_dict
     assert past_race_data.horse_master_dict
+    assert not past_race_data.chakudosu_df.empty
 
 
 def test_fetch_all_skips_result_for_future_race(future_race_data: RaceData) -> None:
@@ -29,3 +30,4 @@ def test_fetch_all_skips_result_for_future_race(future_race_data: RaceData) -> N
     assert not future_race_data.win_show_odds_df.empty
     assert future_race_data.past_performances_dict
     assert future_race_data.horse_master_dict
+    assert not future_race_data.chakudosu_df.empty
