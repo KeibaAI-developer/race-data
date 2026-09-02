@@ -1,4 +1,4 @@
-"""RaceData.__post_init__ のテスト."""
+"""RaceData の初期化のテスト."""
 
 from unittest.mock import MagicMock
 
@@ -53,6 +53,7 @@ def test_lazy_data_not_fetched_on_init(past_race_data: RaceData, mock_di_past: M
     mock_di_past.get_payoff.assert_not_called()
     mock_di_past.get_past_performances.assert_not_called()
     mock_di_past.get_horse_master.assert_not_called()
+    mock_di_past.get_chakudosu.assert_not_called()
 
 
 def test_num_runners_from_race_basic_info(past_race_data: RaceData) -> None:
