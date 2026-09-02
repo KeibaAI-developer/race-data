@@ -2,7 +2,7 @@
 
 ## 概要
 
-`race-data` は、競馬レースの情報を一括で保持するデータクラス `RaceData` を提供する Python ライブラリです。
+`race-data` は、競馬レースの情報を一括で保持するクラス `RaceData` を提供する Python ライブラリです。
 
 `keiba-data-interface` の `DataInterface` を通じてレース基本情報・出馬表・レース結果・払戻情報・各馬の過去成績・着度数を取得し、1つのインスタンスにまとめて保持します。
 
