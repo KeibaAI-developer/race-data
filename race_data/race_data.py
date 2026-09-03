@@ -1,10 +1,11 @@
 """レース情報の型定義."""
 
 import datetime
+import logging
 
 import pandas as pd
 from keiba_data_interface import DataInterface
-from keiba_data_interface.exceptions import UnsupportedOperationError
+from keiba_data_interface.exceptions import DataNotFoundError, UnsupportedOperationError
 from keiba_data_interface.schema import RACE_BASIC_INFO_COLUMNS
 from keiba_domain import (
     CENTRAL_KEIBAJO_CODES,
@@ -26,7 +27,7 @@ class RaceData:
     対象レースの情報（レース基本情報・出馬表・オッズ・票数・結果系）は data_interface から、
     過去成績・過去走のレース基本情報・競走馬マスタ・着度数は history_interface から取得する。
     history_interface を省略すると data_interface を両方に使う。
-    history_interface と baba_code はキーワード専用引数で、位置引数での取り違えを防ぐ。
+    history_interface・baba_code・logger はキーワード専用引数で、位置引数での取り違えを防ぐ。
 
     Attributes:
         race_code (str): 16桁レースコード（年(4)+月日(4)+競馬場(2)+回(2)+日目(2)+R(2)）
@@ -43,6 +44,7 @@ class RaceData:
             fetch_race_result_info または fetch_result 後に参照可能
         payoff_df (pd.DataFrame): 払戻情報。fetch_payoff または fetch_result 後に参照可能
         win_show_odds_df (pd.DataFrame): 単複オッズ情報。fetch_odds 後に参照可能
+        win_show_odds_is_expected (bool): win_show_odds_df が発売前の予想オッズなら True
         win_show_votes_df (pd.DataFrame): 単複票数情報。fetch_votes 後に参照可能
             （fetch_all は票数に対応したプロバイダーでのみ取得する）
         past_performances_dict (dict[int, pd.DataFrame]): 各馬の過去成績辞書。
@@ -53,8 +55,10 @@ class RaceData:
             fetch_horse_master 後に参照可能
         chakudosu_df (pd.DataFrame): 出走別着度数。fetch_chakudosu 後に参照可能
             （fetch_all は着度数に対応したプロバイダーでのみ取得する）
-        num_runners (int): 出走頭数（競走除外などは除く）
+        num_runners (int): 出走頭数（競走除外などは除く）。レース基本情報の出走頭数が取得できない
+            場合は valid_horse_num の数
         valid_horse_num (list[int]): 出走予定の馬番リスト（異常区分コードが1,2,3の馬を除く）。昇順
+        logger (logging.Logger): ロガー。省略時は __name__ のロガー
     """
 
     def __init__(
@@ -64,11 +68,14 @@ class RaceData:
         *,
         history_interface: DataInterface | None = None,
         baba_code: str = "",
+        logger: logging.Logger | None = None,
     ) -> None:
         self.race_code = race_code
         self.data_interface = data_interface
         self.history_interface = data_interface if history_interface is None else history_interface
         self.baba_code = baba_code
+        self.logger = logger or logging.getLogger(__name__)
+        self.win_show_odds_is_expected = False
         self._result_df: pd.DataFrame | None = None
         self._race_result_info_df: pd.DataFrame | None = None
         self._payoff_df: pd.DataFrame | None = None
@@ -81,8 +88,8 @@ class RaceData:
         self.future_race = self._is_future_race()
         self.race_basic_info_df = self.data_interface.get_race_basic_info(self.race_code)
         self.entry_df = self.data_interface.get_entry(self.race_code)
-        self.num_runners = self._calculate_num_runners()
         self.valid_horse_num = self._build_valid_horse_num()
+        self.num_runners = self._calculate_num_runners()
         if not self.baba_code:
             self.baba_code = self._get_baba_code()
 
@@ -116,10 +123,27 @@ class RaceData:
         self.fetch_payoff()
 
     def fetch_odds(self) -> None:
-        """単複オッズを取得する."""
-        self._win_show_odds_df = self.data_interface.get_win_show_odds(self.race_code)
-        if pd.isna(self.race_basic_info_df["出走頭数"].iloc[0]):
-            self.num_runners = int(self._win_show_odds_df["単勝人気"].notna().sum())
+        """単複オッズを取得する.
+
+        現在のオッズが無く（DataNotFoundError）レース日が今日より後なら、馬券発売前と判断して
+        予想オッズ（get_expected_win_show_odds）を使い、win_show_odds_is_expected を True にする。
+        レース日が今日以前にオッズが無いのは取得元の異常なので例外のままにする。
+
+        Raises:
+            DataNotFoundError: レース日が今日以前でオッズが無い場合、または発売前で
+                予想オッズも無い場合
+            UnsupportedOperationError: 発売前で、予想オッズに対応していないプロバイダーの場合
+        """
+        try:
+            self._win_show_odds_df = self.data_interface.get_win_show_odds(self.race_code)
+        except DataNotFoundError:
+            if not self._is_before_race_day():
+                raise
+            self.logger.info("発売前のため予想オッズを使います: race_code=%s", self.race_code)
+            self._win_show_odds_df = self.data_interface.get_expected_win_show_odds(self.race_code)
+            self.win_show_odds_is_expected = True
+            return
+        self.win_show_odds_is_expected = False
 
     def fetch_votes(self) -> None:
         """単勝・複勝の票数を取得する.
@@ -392,12 +416,13 @@ class RaceData:
     def _calculate_num_runners(self) -> int:
         """出走頭数を計算する.
 
-        race_basic_info_df の「出走頭数」から取得する。NaN の場合は0を返す。
+        race_basic_info_df の「出走頭数」から取得する。取得できない（scraping など）場合は
+        出馬表の出走予定馬（valid_horse_num）の数を使う。
         """
         shutsu_val = self.race_basic_info_df["出走頭数"].iloc[0]
         if pd.notna(shutsu_val):
             return int(shutsu_val)
-        return 0
+        return len(self.valid_horse_num)
 
     def _build_valid_horse_num(self) -> list[int]:
         """出走予定の馬番リストを構築する.
@@ -486,6 +511,10 @@ class RaceData:
         if pd.notna(code):
             return str(code)
         return ""
+
+    def _is_before_race_day(self) -> bool:
+        """レース日が今日より後かどうか（当日は含まない）."""
+        return self.race_code[:8] > datetime.date.today().strftime("%Y%m%d")
 
     def _is_future_race(self) -> bool:
         """race_code の日付と現在日付を比較して未来のレースかどうか判定する.

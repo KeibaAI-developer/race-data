@@ -109,21 +109,16 @@ def make_mock_di(
     mock.get_race_basic_info.return_value = (
         race_basic_info_df if race_basic_info_df is not None else make_race_basic_info_df()
     )
-    mock.get_entry.return_value = (
-        entry_df if entry_df is not None else make_entry_df()
-    )
+    mock.get_entry.return_value = entry_df if entry_df is not None else make_entry_df()
     mock.get_win_show_odds.return_value = (
         win_show_odds_df if win_show_odds_df is not None else make_win_show_odds_df()
     )
-    mock.get_result.return_value = (
-        result_df if result_df is not None else make_entry_df()
-    )
+    mock.get_expected_win_show_odds.return_value = make_win_show_odds_df(ninkis=[3, 2, 1])
+    mock.get_result.return_value = result_df if result_df is not None else make_entry_df()
     mock.get_race_result_info.return_value = (
         race_result_info_df if race_result_info_df is not None else pd.DataFrame()
     )
-    mock.get_payoff.return_value = (
-        payoff_df if payoff_df is not None else pd.DataFrame()
-    )
+    mock.get_payoff.return_value = payoff_df if payoff_df is not None else pd.DataFrame()
     mock.get_past_performances.return_value = (
         past_performances_df if past_performances_df is not None else make_past_performances_df()
     )
@@ -144,12 +139,9 @@ def make_mock_di(
         """
         if past_performances_by_horse_id is not None:
             return {
-                horse_id: past_performances_by_horse_id[horse_id].copy()
-                for horse_id in horse_ids
+                horse_id: past_performances_by_horse_id[horse_id].copy() for horse_id in horse_ids
             }
-        return {
-            horse_id: mock.get_past_performances.return_value.copy() for horse_id in horse_ids
-        }
+        return {horse_id: mock.get_past_performances.return_value.copy() for horse_id in horse_ids}
 
     mock.get_past_performances_bulk.side_effect = get_past_performances_bulk
     mock.get_horse_master.return_value = (

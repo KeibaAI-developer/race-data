@@ -63,11 +63,14 @@ def test_num_runners_from_race_basic_info(past_race_data: RaceData) -> None:
     assert past_race_data.num_runners == 16
 
 
-def test_num_runners_zero_when_race_basic_info_missing() -> None:
-    """出走頭数が NaN の場合は init 後 num_runners が0になる."""
-    mock_di = make_mock_di(race_basic_info_df=make_race_basic_info_df(shutsu_count=None))
+def test_num_runners_from_entry_when_race_basic_info_missing() -> None:
+    """出走頭数が NaN の場合は出馬表の出走予定馬（異常区分 1〜3 を除く）の数になる."""
+    mock_di = make_mock_di(
+        race_basic_info_df=make_race_basic_info_df(shutsu_count=None),
+        entry_df=make_entry_df(ijo_codes=["0", "1", "0"]),
+    )
     race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
-    assert race_data.num_runners == 0
+    assert race_data.num_runners == 2
 
 
 def test_baba_code_auto_set_from_turf(past_race_data: RaceData) -> None:
