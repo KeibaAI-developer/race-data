@@ -157,9 +157,18 @@ class RaceData:
             self._win_show_odds_df = self.data_interface.get_win_show_odds(self.race_code)
         except DataNotFoundError:
             if not self._is_before_race_day():
+                self.logger.error(
+                    "レース当日以降に単複オッズを取得できません: race_code=%s", self.race_code
+                )
                 raise
             self.logger.info("発売前のため予想オッズを使います: race_code=%s", self.race_code)
-            self._win_show_odds_df = self.data_interface.get_expected_win_show_odds(self.race_code)
+            try:
+                self._win_show_odds_df = self.data_interface.get_expected_win_show_odds(
+                    self.race_code
+                )
+            except (DataNotFoundError, UnsupportedOperationError):
+                self.logger.error("予想オッズを取得できません: race_code=%s", self.race_code)
+                raise
             self.win_show_odds_is_expected = True
             return
         self.win_show_odds_is_expected = False
