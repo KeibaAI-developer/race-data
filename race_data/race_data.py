@@ -2,6 +2,7 @@
 
 import datetime
 import logging
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 from keiba_data_interface import DataInterface
@@ -17,6 +18,24 @@ from keiba_domain import (
 )
 
 _EXCLUDE_IJO_CODES: frozenset[str] = frozenset({"1", "2", "3"})
+
+
+JST = ZoneInfo("Asia/Tokyo")
+
+
+def today_jst(now: datetime.datetime | None = None) -> datetime.date:
+    """日本時間の今日の日付を返す.
+
+    レースの開催日は日本時間で決まるため、実行環境のタイムゾーンに依らず日本時間で判定する。
+
+    Args:
+        now (datetime.datetime | None): 現在時刻（タイムゾーン付き）。省略時は現在時刻
+
+    Returns:
+        datetime.date: 日本時間での今日
+    """
+    current = datetime.datetime.now(tz=JST) if now is None else now
+    return current.astimezone(JST).date()
 
 
 class RaceData:
@@ -513,8 +532,8 @@ class RaceData:
         return ""
 
     def _is_before_race_day(self) -> bool:
-        """レース日が今日より後かどうか（当日は含まない）."""
-        return self.race_code[:8] > datetime.date.today().strftime("%Y%m%d")
+        """レース日が今日（日本時間）より後かどうか（当日は含まない）."""
+        return self.race_code[:8] > today_jst().strftime("%Y%m%d")
 
     def _is_future_race(self) -> bool:
         """race_code の日付と現在日付を比較して未来のレースかどうか判定する.
@@ -523,5 +542,5 @@ class RaceData:
             bool: 同日を含む未来のレースなら True
         """
         race_date_str = self.race_code[:8]
-        today_str = datetime.date.today().strftime("%Y%m%d")
+        today_str = today_jst().strftime("%Y%m%d")
         return race_date_str >= today_str

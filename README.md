@@ -173,7 +173,7 @@ rd.fetch_odds()
 print(rd.win_show_odds_df)
 ```
 
-馬券発売前（現在のオッズが無く、レース日が今日より後）は予想オッズ（`DataInterface.get_expected_win_show_odds()`。scraping では netkeiba の予想単勝オッズで複勝は NaN）を使い、`win_show_odds_is_expected` が `True` になります。レース当日にオッズが取れないのは取得元の異常なので `DataNotFoundError` のままです。
+馬券発売前（現在のオッズが無く、レース日が日本時間の今日より後）は予想オッズ（`DataInterface.get_expected_win_show_odds()`。scraping では netkeiba の予想単勝オッズで複勝は NaN）を使い、`win_show_odds_is_expected` が `True` になります。レース当日にオッズが取れないのは取得元の異常なので `DataNotFoundError` のままです。
 
 ### 最新情報用とアーカイブ用で DataInterface を分ける
 
@@ -217,7 +217,7 @@ race_data_list = [
 | `history_interface` | `DataInterface` | 過去情報の取得先（アーカイブ用）。省略時は `data_interface` |
 | `baba_code` | `str` | 馬場状態コード。`"1"`(良), `"2"`(稍), `"3"`(重), `"4"`(不)。省略時は自動設定 |
 | `logger` | `logging.Logger` | ロガー（キーワード専用）。省略時は `__name__` のロガー |
-| `future_race` | `bool` | 未来のレースかどうか（レース日 ≥ 実行日なら `True`） |
+| `future_race` | `bool` | 未来のレースかどうか（レース日 ≥ 日本時間の実行日なら `True`） |
 | `race_basic_info_df` | `pd.DataFrame` | レース基本情報（1行） |
 | `entry_df` | `pd.DataFrame` | 出馬表（常に取得） |
 | `result_df` | `pd.DataFrame` | レース結果。`fetch_race_result()` または `fetch_result()` 後に参照可能（未取得時は `RuntimeError`）。未来レースでは `fetch_all()` 後に空 |
