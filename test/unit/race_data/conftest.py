@@ -195,6 +195,9 @@ def make_mock_di(
     mock.get_win_show_votes.return_value = pd.DataFrame(
         {"馬番": [1, 2, 3], "複勝票数": [300, 200, 100], "複勝票数合計": [700, 700, 700]}
     )
+    mock.get_chakudosu.return_value = pd.DataFrame(
+        {"馬番": [1, 2, 3], "血統登録番号": ["2019105219", "2020103656", "2021190001"]}
+    )
     return mock
 
 
@@ -232,3 +235,17 @@ def another_past_race_data(mock_di_past2: MagicMock) -> RaceData:
 def future_race_data(mock_di_future: MagicMock) -> RaceData:
     """未来レースの RaceData インスタンス."""
     return RaceData(race_code=FUTURE_RACE_CODE, data_interface=mock_di_future)
+
+
+@pytest.fixture()
+def mock_di_history() -> MagicMock:
+    """アーカイブ用モック DataInterface."""
+    return make_mock_di()
+
+
+@pytest.fixture()
+def race_data_with_history(mock_di_past: MagicMock, mock_di_history: MagicMock) -> RaceData:
+    """最新情報用とアーカイブ用を分けた過去レースの RaceData インスタンス."""
+    return RaceData(
+        race_code=PAST_RACE_CODE, data_interface=mock_di_past, history_interface=mock_di_history
+    )
