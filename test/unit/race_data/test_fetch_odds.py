@@ -1,5 +1,6 @@
 """RaceData.fetch_odds のテスト."""
 
+import datetime
 import logging
 
 import pandas as pd
@@ -61,6 +62,28 @@ def test_fetch_odds_uses_expected_odds_before_race_day(caplog: pytest.LogCapture
     assert race_data.win_show_odds_is_expected is True
     mock_di.get_expected_win_show_odds.assert_called_once_with(FUTURE_RACE_CODE)
     assert "予想オッズ" in caplog.text
+
+
+def test_fetch_odds_ignores_reference_date_and_uses_expected_odds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """reference_date で future_race が False でも、レース日が実行日より後なら予想オッズを使う."""
+    monkeypatch.setattr("race_data.race_data.today_jst", lambda: datetime.date(2026, 9, 25))
+    race_code = "2026092605050801"
+    mock_di = make_mock_di()
+    mock_di.get_win_show_odds.side_effect = DataNotFoundError("発売前")
+    expected_df = make_win_show_odds_df(ninkis=[2, 1, 3])
+    mock_di.get_expected_win_show_odds.return_value = expected_df
+    race_data = RaceData(
+        race_code=race_code, data_interface=mock_di, reference_date=datetime.date(2026, 9, 27)
+    )
+    assert race_data.future_race is False
+
+    race_data.fetch_odds()
+
+    pd.testing.assert_frame_equal(race_data.win_show_odds_df, expected_df)
+    assert race_data.win_show_odds_is_expected is True
+    mock_di.get_expected_win_show_odds.assert_called_once_with(race_code)
 
 
 def test_fetch_odds_resets_expected_flag_when_current_odds_available() -> None:
