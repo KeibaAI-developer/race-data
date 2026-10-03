@@ -46,7 +46,8 @@ class RaceData:
     対象レースの情報（レース基本情報・出馬表・オッズ・票数・結果系）は data_interface から、
     過去成績・過去走のレース基本情報・競走馬マスタ・着度数は history_interface から取得する。
     history_interface を省略すると data_interface を両方に使う。
-    history_interface・baba_code・logger はキーワード専用引数で、位置引数での取り違えを防ぐ。
+    history_interface・baba_code・reference_date・logger はキーワード専用引数で、
+    位置引数での取り違えを防ぐ。
 
     Attributes:
         race_code (str): 16桁レースコード（年(4)+月日(4)+競馬場(2)+回(2)+日目(2)+R(2)）
@@ -55,7 +56,8 @@ class RaceData:
             省略時は data_interface
         baba_code (str): 馬場状態コード。"1"(良), "2"(稍), "3"(重), "4"(不) のいずれか。
             省略時は race_basic_info_df から自動設定
-        future_race (bool): 未来のレースかどうか
+        reference_date (datetime.date): future_race を判定する基準日。省略時は today_jst()
+        future_race (bool): レース日が reference_date 以降かどうか
         race_basic_info_df (pd.DataFrame): レース基本情報（1行）
         entry_df (pd.DataFrame): 出馬表（常に取得）
         result_df (pd.DataFrame): レース結果。fetch_race_result または fetch_result 後に参照可能
@@ -87,12 +89,14 @@ class RaceData:
         *,
         history_interface: DataInterface | None = None,
         baba_code: str = "",
+        reference_date: datetime.date | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self.race_code = race_code
         self.data_interface = data_interface
         self.history_interface = data_interface if history_interface is None else history_interface
         self.baba_code = baba_code
+        self.reference_date = today_jst() if reference_date is None else reference_date
         self.logger = logger or logging.getLogger(__name__)
         self.win_show_odds_is_expected = False
         self._result_df: pd.DataFrame | None = None
@@ -545,11 +549,11 @@ class RaceData:
         return self.race_code[:8] > today_jst().strftime("%Y%m%d")
 
     def _is_future_race(self) -> bool:
-        """race_code の日付と現在日付を比較して未来のレースかどうか判定する.
+        """race_code の日付と reference_date を比較して未来のレースかどうか判定する.
 
         Returns:
-            bool: 同日を含む未来のレースなら True
+            bool: reference_date 当日を含む未来のレースなら True
         """
         race_date_str = self.race_code[:8]
-        today_str = today_jst().strftime("%Y%m%d")
-        return race_date_str >= today_str
+        reference_date_str = self.reference_date.strftime("%Y%m%d")
+        return race_date_str >= reference_date_str

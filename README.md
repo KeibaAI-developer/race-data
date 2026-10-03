@@ -7,7 +7,7 @@
 `keiba-data-interface` の `DataInterface` を通じてレース基本情報・出馬表・レース結果・払戻情報・各馬の過去成績・着度数を取得し、1つのインスタンスにまとめて保持します。
 
 - **未来のレース**（予測対象）と**過去のレース**（学習データ取得）の両方に対応
-- レースコードの日付から未来/過去を自動判定（同日は未来扱い）
+- レースコードの日付と基準日（`reference_date`。省略時は日本時間の実行日）を比較して未来/過去を自動判定（基準日当日は未来扱い）
 - 初期化時は確定データ（レース基本情報・出馬表）のみ取得し、結果・オッズ・過去成績・馬マスタ・着度数は `fetch_*()` で明示的に取得する遅延取得設計
 - 対象レースの情報（最新情報用）と過去情報（アーカイブ用）で `DataInterface` を分けられる
 - 馬場状態・レース種別・コース形状の判定メソッドを提供
@@ -136,6 +136,23 @@ rd = RaceData(race_code=race_code, data_interface=di, baba_code="3")  # 重馬�
 print(rd.is_good_to_firm())  # False
 ```
 
+### future_race の基準日を指定する
+
+`future_race` はレースコードの日付と基準日を比較して判定します。基準日は `reference_date` で指定でき、省略時は日本時間の実行日になります。
+
+```python
+import datetime
+
+rd = RaceData(
+    race_code=race_code,
+    data_interface=di,
+    reference_date=datetime.date(2026, 9, 27),
+)
+print(rd.future_race)  # レース日が2026-09-27以降なら True
+```
+
+`fetch_odds()` が予想オッズを使うかどうかの判定（馬券の発売状況）は `reference_date` の影響を受けず、常に日本時間の実行日を基準にします。
+
 ### 各馬の過去成績にアクセスする
 
 `past_performances_dict` は馬番をキーとした辞書です。`fetch_past_performances()` で取得した後に参照できます。`get_filtered_past_performances` で機械学習に有効なデータ（中央競馬のみ、競走除外除く）に絞り込めます。
@@ -216,8 +233,9 @@ race_data_list = [
 | `data_interface` | `DataInterface` | 対象レースの情報の取得先（最新情報用） |
 | `history_interface` | `DataInterface` | 過去情報の取得先（アーカイブ用）。省略時は `data_interface` |
 | `baba_code` | `str` | 馬場状態コード。`"1"`(良), `"2"`(稍), `"3"`(重), `"4"`(不)。省略時は自動設定 |
+| `reference_date` | `datetime.date` | `future_race` を判定する基準日（キーワード専用）。省略時は日本時間の実行日 |
 | `logger` | `logging.Logger` | ロガー（キーワード専用）。省略時は `__name__` のロガー |
-| `future_race` | `bool` | 未来のレースかどうか（レース日 ≥ 日本時間の実行日なら `True`） |
+| `future_race` | `bool` | レース日が `reference_date` 以降なら `True` |
 | `race_basic_info_df` | `pd.DataFrame` | レース基本情報（1行） |
 | `entry_df` | `pd.DataFrame` | 出馬表（常に取得） |
 | `result_df` | `pd.DataFrame` | レース結果。`fetch_race_result()` または `fetch_result()` 後に参照可能（未取得時は `RuntimeError`）。未来レースでは `fetch_all()` 後に空 |

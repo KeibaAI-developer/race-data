@@ -1,10 +1,11 @@
 """RaceData の初期化のテスト."""
 
+import datetime
 from unittest.mock import MagicMock
 
 import pytest
 
-from race_data.race_data import RaceData
+from race_data.race_data import RaceData, today_jst
 
 from .conftest import (
     FUTURE_RACE_CODE,
@@ -25,6 +26,54 @@ def test_future_race_true_for_future_code(future_race_data: RaceData) -> None:
 def test_future_race_false_for_past_code(past_race_data: RaceData) -> None:
     """過去のレースコードで future_race が False になる."""
     assert past_race_data.future_race is False
+
+
+def test_reference_date_defaults_to_today_jst() -> None:
+    """reference_date 省略時は today_jst() が設定される."""
+    mock_di = make_mock_di()
+    race_data = RaceData(race_code=PAST_RACE_CODE, data_interface=mock_di)
+    assert race_data.reference_date == today_jst()
+
+
+def test_future_race_true_when_omitted_and_race_day_is_today() -> None:
+    """reference_date 省略時、レース日が今日なら future_race が True になる."""
+    today_race_code = today_jst().strftime("%Y%m%d") + "05050801"
+    mock_di = make_mock_di()
+    race_data = RaceData(race_code=today_race_code, data_interface=mock_di)
+    assert race_data.future_race is True
+
+
+def test_future_race_false_when_race_day_before_reference_date() -> None:
+    """レース日が reference_date より前なら future_race が False になる."""
+    mock_di = make_mock_di()
+    race_data = RaceData(
+        race_code="2026092605050801",
+        data_interface=mock_di,
+        reference_date=datetime.date(2026, 9, 27),
+    )
+    assert race_data.future_race is False
+
+
+def test_future_race_true_when_race_day_equals_reference_date() -> None:
+    """レース日が reference_date と同日なら future_race が True になる."""
+    mock_di = make_mock_di()
+    race_data = RaceData(
+        race_code="2026092605050801",
+        data_interface=mock_di,
+        reference_date=datetime.date(2026, 9, 26),
+    )
+    assert race_data.future_race is True
+
+
+def test_future_race_true_when_race_day_after_reference_date() -> None:
+    """レース日が reference_date より後なら future_race が True になる."""
+    mock_di = make_mock_di()
+    race_data = RaceData(
+        race_code="2026092705050801",
+        data_interface=mock_di,
+        reference_date=datetime.date(2026, 9, 26),
+    )
+    assert race_data.future_race is True
 
 
 def test_race_basic_info_df_fetched(past_race_data: RaceData, mock_di_past: MagicMock) -> None:
